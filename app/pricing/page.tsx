@@ -1,4 +1,66 @@
+'use client'
+
+import { useState } from 'react'
+import { useAuth } from '@/lib/auth'
+import { loadStripe } from '@stripe/stripe-js'
+
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
+
 export default function PricingPage() {
+  const [isLoading, setIsLoading] = useState(false)
+  const { user } = useAuth()
+
+  const handleSubscribe = async () => {
+    if (!user) {
+      window.location.href = '/auth/signin'
+      return
+    }
+
+    setIsLoading(true)
+
+    try {
+      const response = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          priceId: 'price_1StwjkHB1vF8ECVdL2bYYzeW', // Individual plan price ID
+          userId: user.id,
+          userEmail: user.email,
+        }),
+      })
+
+      const { sessionId, error } = await response.json()
+
+      if (error) {
+        console.error('Error creating checkout session:', error)
+        alert('Failed to start checkout. Please try again.')
+        return
+      }
+
+      const stripe = await stripePromise
+      if (!stripe) {
+        console.error('Stripe failed to load')
+        return
+      }
+
+      const { error: stripeError } = await stripe.redirectToCheckout({
+        sessionId,
+      })
+
+      if (stripeError) {
+        console.error('Error redirecting to checkout:', stripeError)
+        alert('Failed to redirect to checkout. Please try again.')
+      }
+    } catch (error) {
+      console.error('Error:', error)
+      alert('An error occurred. Please try again.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   const plans = [
     {
       name: 'Pay As You Go',
@@ -11,8 +73,10 @@ export default function PricingPage() {
         'Email generation',
         'No subscription required'
       ],
-      cta: 'Start Analyzing',
-      popular: false
+      cta: 'Coming Soon',
+      action: null,
+      popular: false,
+      disabled: true
     },
     {
       name: 'Individual',
@@ -26,8 +90,10 @@ export default function PricingPage() {
         'Meeting history',
         'Priority support'
       ],
-      cta: 'Start Free Trial',
-      popular: true
+      cta: 'Subscribe Now',
+      action: handleSubscribe,
+      popular: true,
+      disabled: false
     },
     {
       name: 'Team',
@@ -42,8 +108,10 @@ export default function PricingPage() {
         'Admin dashboard',
         'Priority support'
       ],
-      cta: 'Start Team Trial',
-      popular: false
+      cta: 'Coming Soon',
+      action: null,
+      popular: false,
+      disabled: true
     }
   ]
 
@@ -55,7 +123,7 @@ export default function PricingPage() {
             Simple, Transparent Pricing
           </h1>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Choose the plan that fits your meeting workflow. Start with pay-as-you-go or save with unlimited access.
+            Choose the plan that fits your meeting workflow. Start with our Individual plan for unlimited meeting analysis.
           </p>
         </div>
 
@@ -96,38 +164,20 @@ export default function PricingPage() {
               </ul>
 
               <button
+                onClick={plan.action || undefined}
+                disabled={plan.disabled || isLoading}
                 className={`w-full py-3 px-6 rounded-lg font-semibold transition-colors ${
                   plan.popular
                     ? 'bg-black text-white hover:bg-gray-800'
+                    : plan.disabled
+                    ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                     : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
-                }`}
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
               >
-                {plan.cta}
+                {isLoading && !plan.disabled ? 'Loading...' : plan.cta}
               </button>
             </div>
           ))}
-        </div>
-
-        <div className="mt-16 text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-8">Frequently Asked Questions</h2>
-          <div className="max-w-3xl mx-auto">
-            <div className="space-y-6">
-              <div className="bg-white rounded-lg p-6 shadow">
-                <h3 className="font-semibold text-gray-900 mb-2">Can I cancel anytime?</h3>
-                <p className="text-gray-600">Yes, you can cancel your subscription at any time. No long-term contracts.</p>
-              </div>
-
-              <div className="bg-white rounded-lg p-6 shadow">
-                <h3 className="font-semibold text-gray-900 mb-2">Is my data secure?</h3>
-                <p className="text-gray-600">Absolutely. We use enterprise-grade encryption and never store your meeting content permanently.</p>
-              </div>
-
-              <div className="bg-white rounded-lg p-6 shadow">
-                <h3 className="font-semibold text-gray-900 mb-2">What file formats do you support?</h3>
-                <p className="text-gray-600">Currently text transcripts. Audio file support (MP3, MP4, WAV) coming soon.</p>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>
