@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { supabaseAdmin } from '@/lib/supabase-admin'
 import { MeetingAnalysis } from '@/types'
 
 export async function POST(request: NextRequest) {
@@ -15,19 +16,48 @@ export async function POST(request: NextRequest) {
     // Generate a title from the analysis if none provided
     const meetingTitle = title || generateMeetingTitle(analysis)
 
-    // Create meeting object
-    const meeting = {
-      id: `meeting_${Date.now()}`,
-      user_id: userId,
-      title: meetingTitle,
-      transcript,
-      results: analysis,
-      meeting_date: new Date().toISOString(),
-      created_at: new Date().toISOString(),
+    // Save meeting to database
+    const { data: meeting, error: meetingError } = await supabaseAdmin
+      .from('meetings')
+      .insert({
+        user_id: userId,
+        title: meetingTitle,
+        transcript,
+        results: analysis,
+        meeting_date: new Date().toISOString(),
+      })
+      .select()
+      .single()
+
+    if (meetingError) {
+      console.error('Error saving meeting:', meetingError)
+      return NextResponse.json(
+        { error: 'Failed to save meeting' },
+        { status: 500 }
+      )
     }
 
-    // For demo purposes, we'll use localStorage via cookies
-    // In a real app, this would be saved to a database
+    // Save action items separately for better management
+    if (analysis.actionItems?.length > 0) {
+      const actionItemsData = analysis.actionItems.map((item: any) => ({
+        meeting_id: meeting.id,
+        task: item.task,
+        owner: item.owner,
+        deadline: item.deadline,
+        priority: item.priority || 'medium',
+        completed: item.completed || false,
+      }))
+
+      const { error: actionItemsError } = await supabaseAdmin
+        .from('action_items')
+        .insert(actionItemsData)
+
+      if (actionItemsError) {
+        console.error('Error saving action items:', actionItemsError)
+        // Don't fail the request, but log the error
+      }
+    }
+
     return NextResponse.json({
       success: true,
       meeting,
@@ -55,9 +85,26 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // For demo purposes, return empty array
-    // In a real app, this would fetch from a database
-    const meetings: any[] = []
+    const { data: meetings, error } = await supabaseAdmin
+      .from('meetings')
+      .select(`
+        id,
+        title,
+        meeting_date,
+        created_at,
+        results,
+        action_items:action_items(*)
+      `)
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.error('Error fetching meetings:', error)
+      return NextResponse.json(
+        { error: 'Failed to fetch meetings' },
+        { status: 500 }
+      )
+    }
 
     return NextResponse.json({ meetings })
 

@@ -37,14 +37,11 @@ export default function DashboardPage() {
 
   const fetchMeetings = async () => {
     try {
-      // For demo, get meetings from localStorage
-      const storedMeetings = localStorage.getItem(`meetings_${userId}`)
-      if (storedMeetings) {
-        const parsedMeetings = JSON.parse(storedMeetings)
-        setMeetings(parsedMeetings)
-      } else {
-        setMeetings([])
-      }
+      const response = await fetch(`/api/meetings?userId=${userId}`)
+      if (!response.ok) throw new Error('Failed to fetch meetings')
+
+      const data = await response.json()
+      setMeetings(data.meetings || [])
     } catch (err) {
       setError('Failed to load meetings')
       console.error('Error fetching meetings:', err)

@@ -109,11 +109,6 @@ export default function SignInPage() {
           </form>
         </div>
 
-        <div className="text-center bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <p className="text-sm text-blue-700">
-            <strong>Demo Mode:</strong> Use any email/password to sign in
-          </p>
-        </div>
       </div>
     </div>
   )

@@ -1,79 +1,88 @@
 'use client'
 
-import React, { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useContext, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-
-interface User {
-  id: string
-  email: string
-  name?: string
-}
+import { supabase } from './supabase'
+import type { User } from '@supabase/supabase-js'
 
 interface AuthContextType {
   user: User | null
   signIn: (email: string, password: string) => Promise<void>
   signUp: (email: string, password: string) => Promise<void>
-  signOut: () => void
-  isLoading: boolean
+  signOut: () => Promise<void>
+  loading: boolean
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [loading, setLoading] = useState(true)
   const router = useRouter()
 
   useEffect(() => {
-    // Check for existing session in localStorage
-    const storedUser = localStorage.getItem('meetingmind_user')
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser))
-      } catch (error) {
-        console.error('Error parsing stored user:', error)
-        localStorage.removeItem('meetingmind_user')
-      }
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      setUser(user)
+      setLoading(false)
     }
-    setIsLoading(false)
-  }, [])
+
+    getUser()
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setUser(session?.user ?? null)
+        setLoading(false)
+      }
+    )
+
+    return () => subscription.unsubscribe()
+  }, [supabase.auth])
 
   const signIn = async (email: string, password: string) => {
-    // For demo purposes, accept any email/password
-    // In production, this would validate against Supabase
-    const user: User = {
-      id: `user_${Date.now()}`,
-      email,
-      name: email.split('@')[0]
-    }
+    setLoading(true)
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
 
-    setUser(user)
-    localStorage.setItem('meetingmind_user', JSON.stringify(user))
-    router.push('/dashboard')
+      if (error) throw error
+
+      router.push('/dashboard')
+    } catch (error) {
+      throw error
+    } finally {
+      setLoading(false)
+    }
   }
 
   const signUp = async (email: string, password: string) => {
-    // For demo purposes, create user with any email/password
-    // In production, this would create user in Supabase
-    const user: User = {
-      id: `user_${Date.now()}`,
-      email,
-      name: email.split('@')[0]
-    }
+    setLoading(true)
+    try {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+      })
 
-    setUser(user)
-    localStorage.setItem('meetingmind_user', JSON.stringify(user))
-    router.push('/dashboard')
+      if (error) throw error
+
+      // User will need to verify email before they can sign in
+      router.push('/auth/signin')
+    } catch (error) {
+      throw error
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const signOut = () => {
-    setUser(null)
-    localStorage.removeItem('meetingmind_user')
+  const signOut = async () => {
+    await supabase.auth.signOut()
     router.push('/')
   }
 
   return (
-    <AuthContext.Provider value={{ user, signIn, signUp, signOut, isLoading }}>
+    <AuthContext.Provider value={{ user, signIn, signUp, signOut, loading }}>
       {children}
     </AuthContext.Provider>
   )
@@ -85,32 +94,4 @@ export function useAuth() {
     throw new Error('useAuth must be used within an AuthProvider')
   }
   return context
-}
-
-// HOC for protected routes
-export function withAuth<T extends object>(Component: React.ComponentType<T>) {
-  return function ProtectedComponent(props: T) {
-    const { user, isLoading } = useAuth()
-    const router = useRouter()
-
-    useEffect(() => {
-      if (!isLoading && !user) {
-        router.push('/auth/signin')
-      }
-    }, [user, isLoading, router])
-
-    if (isLoading) {
-      return (
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-black"></div>
-        </div>
-      )
-    }
-
-    if (!user) {
-      return null
-    }
-
-    return <Component {...props} />
-  }
 }

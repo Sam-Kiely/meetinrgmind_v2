@@ -13,40 +13,24 @@ export default function HomePage() {
   const handleAnalysisComplete = async (analysisResult: MeetingAnalysis, transcript: string) => {
     setAnalysis(analysisResult)
 
-    // Auto-save the meeting to localStorage for dashboard
-    try {
-      const userId = user?.id || 'demo-user-id'
-
-      // Generate meeting object
-      const meeting = {
-        id: `meeting_${Date.now()}`,
-        user_id: userId,
-        title: generateMeetingTitle(analysisResult),
-        meeting_date: new Date().toISOString(),
-        created_at: new Date().toISOString(),
-        results: analysisResult,
-        action_items: analysisResult.actionItems.map((item, idx) => ({
-          id: `action_${Date.now()}_${idx}`,
-          task: item.task,
-          owner: item.owner,
-          deadline: item.deadline,
-          priority: item.priority,
-          completed: item.completed || false,
-        })),
+    // Auto-save the meeting to database for dashboard
+    if (user) {
+      try {
+        await fetch('/api/meetings', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            transcript,
+            analysis: analysisResult,
+            userId: user.id,
+          }),
+        })
+      } catch (error) {
+        console.error('Error saving meeting:', error)
+        // Don't show error to user - saving is silent
       }
-
-      // Get existing meetings
-      const existingMeetings = JSON.parse(localStorage.getItem(`meetings_${userId}`) || '[]')
-
-      // Add new meeting at the beginning
-      const updatedMeetings = [meeting, ...existingMeetings]
-
-      // Save to localStorage
-      localStorage.setItem(`meetings_${userId}`, JSON.stringify(updatedMeetings))
-
-    } catch (error) {
-      console.error('Error saving meeting:', error)
-      // Don't show error to user - saving is silent
     }
   }
 
