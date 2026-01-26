@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { stripe } from '@/lib/stripe'
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase-admin'
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,11 +15,11 @@ export async function POST(request: NextRequest) {
 
     // Create or retrieve Stripe customer
     let customerId
-    const { data: profile } = await supabase
+    const { data: profile } = await supabaseAdmin
       .from('profiles')
       .select('stripe_customer_id')
       .eq('id', userId)
-      .single()
+      .single() as { data: { stripe_customer_id: string | null } | null; error: any }
 
     if (profile?.stripe_customer_id) {
       customerId = profile.stripe_customer_id
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
       customerId = customer.id
 
       // Update profile with customer ID
-      await supabase
+      await (supabaseAdmin as any)
         .from('profiles')
         .update({ stripe_customer_id: customerId })
         .eq('id', userId)

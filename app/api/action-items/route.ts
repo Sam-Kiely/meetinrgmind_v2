@@ -22,7 +22,7 @@ export async function PATCH(request: NextRequest) {
       .eq('id', actionItemId)
       .single()
 
-    if (fetchError || !actionItem || actionItem.meeting.user_id !== userId) {
+    if (fetchError || !actionItem || (actionItem as any).meeting?.user_id !== userId) {
       return NextResponse.json(
         { error: 'Action item not found or unauthorized' },
         { status: 404 }
@@ -30,7 +30,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Update the action item
-    const { data: updatedItem, error: updateError } = await supabaseAdmin
+    const { data: updatedItem, error: updateError } = await (supabaseAdmin as any)
       .from('action_items')
       .update({
         completed,
@@ -86,7 +86,7 @@ export async function DELETE(request: NextRequest) {
       .eq('id', actionItemId)
       .single()
 
-    if (fetchError || !actionItem || actionItem.meeting.user_id !== userId) {
+    if (fetchError || !actionItem || (actionItem as any).meeting?.user_id !== userId) {
       return NextResponse.json(
         { error: 'Action item not found or unauthorized' },
         { status: 404 }

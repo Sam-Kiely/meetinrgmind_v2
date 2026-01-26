@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     const meetingTitle = title || generateMeetingTitle(analysis)
 
     // Save meeting to database
-    const { data: meeting, error: meetingError } = await supabaseAdmin
+    const { data: meeting, error: meetingError } = await (supabaseAdmin as any)
       .from('meetings')
       .insert({
         user_id: userId,
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
         completed: item.completed || false,
       }))
 
-      const { error: actionItemsError } = await supabaseAdmin
+      const { error: actionItemsError } = await (supabaseAdmin as any)
         .from('action_items')
         .insert(actionItemsData)
 
@@ -85,7 +85,7 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const { data: meetings, error } = await supabaseAdmin
+    const { data: meetings, error } = await (supabaseAdmin as any)
       .from('meetings')
       .select(`
         id,

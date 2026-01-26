@@ -12,7 +12,7 @@ export default function EmailPreview({ email, title }: EmailPreviewProps) {
   const [copied, setCopied] = useState(false)
 
   const copyToClipboard = async () => {
-    const emailText = `To: ${email.to}\nSubject: ${email.subject}\n\n${email.body}`
+    const emailText = `To: ${email.recipientName}\nSubject: ${email.subject}\n\n${email.body}`
     await navigator.clipboard.writeText(emailText)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
@@ -35,7 +35,7 @@ export default function EmailPreview({ email, title }: EmailPreviewProps) {
           <label className="block text-sm font-medium text-gray-700">To:</label>
           <input
             type="text"
-            value={email.to}
+            value={email.recipientName}
             readOnly
             className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-900"
           />

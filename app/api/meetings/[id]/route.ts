@@ -3,10 +3,10 @@ import { supabaseAdmin } from '@/lib/supabase-admin'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const meetingId = params.id
+    const { id: meetingId } = await params
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get('userId')
 

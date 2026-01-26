@@ -5,7 +5,8 @@ import { supabaseAdmin } from '@/lib/supabase-admin'
 
 export async function POST(req: NextRequest) {
   const body = await req.text()
-  const signature = headers().get('stripe-signature') as string
+  const headersList = await headers()
+  const signature = headersList.get('stripe-signature') as string
 
   let event
 
@@ -34,7 +35,7 @@ export async function POST(req: NextRequest) {
 
         if (customerEmail) {
           // Update user profile with Stripe customer ID and subscription
-          const { error } = await supabaseAdmin
+          const { error } = await (supabaseAdmin as any)
             .from('profiles')
             .update({
               stripe_customer_id: customerId,
@@ -63,7 +64,7 @@ export async function POST(req: NextRequest) {
         if (customerEmail) {
           const subscriptionTier = getSubscriptionTierFromPrice(subscription.items.data[0]?.price.id)
 
-          const { error } = await supabaseAdmin
+          const { error } = await (supabaseAdmin as any)
             .from('profiles')
             .update({
               subscription_tier: subscriptionTier,
@@ -89,7 +90,7 @@ export async function POST(req: NextRequest) {
         const customerEmail = (customer as any).email
 
         if (customerEmail) {
-          const { error } = await supabaseAdmin
+          const { error } = await (supabaseAdmin as any)
             .from('profiles')
             .update({
               subscription_tier: 'free',
@@ -121,8 +122,8 @@ export async function POST(req: NextRequest) {
 
 function getSubscriptionTier(mode: string, amount: number | null): string {
   if (mode === 'subscription') {
-    if (amount === 1900) return 'individual' // $19.00
-    if (amount === 4900) return 'team' // $49.00
+    if (amount === 900) return 'individual' // $9.00
+    if (amount === 2900) return 'team' // $29.00
   }
   return 'free'
 }
