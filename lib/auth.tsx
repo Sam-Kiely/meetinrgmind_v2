@@ -42,10 +42,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signIn = async (email: string, password: string) => {
     setLoading(true)
     try {
+      console.log('Attempting signin with:', { email, password: '[hidden]' })
+
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
+
+      console.log('Signin response:', { data, error })
 
       if (error) {
         console.error('Supabase signin error:', error)
@@ -64,13 +68,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signUp = async (email: string, password: string) => {
     setLoading(true)
     try {
+      console.log('Attempting signup with:', { email, password: '[hidden]' })
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/confirm`
-        }
       })
+
+      console.log('Signup response:', { data, error })
 
       if (error) {
         console.error('Supabase signup error:', error)
