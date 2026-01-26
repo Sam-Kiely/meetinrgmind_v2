@@ -42,15 +42,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signIn = async (email: string, password: string) => {
     setLoading(true)
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
 
-      if (error) throw error
+      if (error) {
+        console.error('Supabase signin error:', error)
+        throw new Error(error.message || 'Failed to sign in')
+      }
 
       router.push('/dashboard')
     } catch (error) {
+      console.error('Signin error:', error)
       throw error
     } finally {
       setLoading(false)
@@ -60,16 +64,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signUp = async (email: string, password: string) => {
     setLoading(true)
     try {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/confirm`
+        }
       })
 
-      if (error) throw error
+      if (error) {
+        console.error('Supabase signup error:', error)
+        throw new Error(error.message || 'Failed to create account')
+      }
 
       // User will need to verify email before they can sign in
       router.push('/auth/signin')
     } catch (error) {
+      console.error('Signup error:', error)
       throw error
     } finally {
       setLoading(false)

@@ -30,8 +30,9 @@ export default function SignUpPage() {
 
     try {
       await signUp(email, password)
-    } catch (err) {
-      setError('Failed to create account. Please try again.')
+    } catch (err: any) {
+      console.error('Signup page error:', err)
+      setError(err.message || 'Failed to create account. Please try again.')
       setIsLoading(false)
     }
   }
