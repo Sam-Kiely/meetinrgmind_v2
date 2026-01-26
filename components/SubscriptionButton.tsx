@@ -1,10 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { loadStripe } from '@stripe/stripe-js'
 import { useAuth } from '@/lib/auth'
-
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
 
 export default function SubscriptionButton() {
   const [isLoading, setIsLoading] = useState(false)
@@ -31,7 +28,7 @@ export default function SubscriptionButton() {
         }),
       })
 
-      const { sessionId, error } = await response.json()
+      const { sessionId, url, error } = await response.json()
 
       if (error) {
         console.error('Error creating checkout session:', error)
@@ -39,18 +36,11 @@ export default function SubscriptionButton() {
         return
       }
 
-      const stripe = await stripePromise
-      if (!stripe) {
-        console.error('Stripe failed to load')
-        return
-      }
-
-      const { error: stripeError } = await stripe.redirectToCheckout({
-        sessionId,
-      })
-
-      if (stripeError) {
-        console.error('Error redirecting to checkout:', stripeError)
+      if (url) {
+        // Redirect to Stripe Checkout
+        window.location.href = url
+      } else {
+        console.error('No checkout URL received')
         alert('Failed to redirect to checkout. Please try again.')
       }
     } catch (error) {

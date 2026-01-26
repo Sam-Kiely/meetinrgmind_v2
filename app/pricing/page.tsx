@@ -2,9 +2,6 @@
 
 import { useState } from 'react'
 import { useAuth } from '@/lib/auth'
-import { loadStripe } from '@stripe/stripe-js'
-
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
 
 export default function PricingPage() {
   const [isLoading, setIsLoading] = useState(false)
@@ -25,13 +22,13 @@ export default function PricingPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          priceId: 'price_1StwjkHB1vF8ECVdL2bYYzeW', // Individual plan price ID
+          priceId: process.env.NEXT_PUBLIC_STRIPE_INDIVIDUAL_PRICE_ID || 'price_1StwjkHB1vF8ECVdL2bYYzeW',
           userId: user.id,
           userEmail: user.email,
         }),
       })
 
-      const { sessionId, error } = await response.json()
+      const { sessionId, url, error } = await response.json()
 
       if (error) {
         console.error('Error creating checkout session:', error)
@@ -39,18 +36,11 @@ export default function PricingPage() {
         return
       }
 
-      const stripe = await stripePromise
-      if (!stripe) {
-        console.error('Stripe failed to load')
-        return
-      }
-
-      const { error: stripeError } = await stripe.redirectToCheckout({
-        sessionId,
-      })
-
-      if (stripeError) {
-        console.error('Error redirecting to checkout:', stripeError)
+      if (url) {
+        // Redirect to Stripe Checkout
+        window.location.href = url
+      } else {
+        console.error('No checkout URL received')
         alert('Failed to redirect to checkout. Please try again.')
       }
     } catch (error) {
