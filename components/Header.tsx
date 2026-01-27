@@ -2,9 +2,12 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
+import { useAuth } from '@/lib/auth'
+import UserMenu from './UserMenu'
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const { user } = useAuth()
 
   return (
     <header className="bg-black text-white shadow-lg">
@@ -28,19 +31,25 @@ export default function Header() {
             </Link>
           </nav>
 
-          <div className="hidden md:flex space-x-4">
-            <Link
-              href="/auth/signin"
-              className="px-4 py-2 text-gray-300 hover:text-white transition-colors"
-            >
-              Sign In
-            </Link>
-            <Link
-              href="/auth/signup"
-              className="px-6 py-2 bg-white text-black rounded-lg hover:bg-gray-100 transition-colors"
-            >
-              Sign Up
-            </Link>
+          <div className="hidden md:flex items-center space-x-4">
+            {user ? (
+              <UserMenu />
+            ) : (
+              <>
+                <Link
+                  href="/auth/signin"
+                  className="px-4 py-2 text-gray-300 hover:text-white transition-colors"
+                >
+                  Sign In
+                </Link>
+                <Link
+                  href="/auth/signup"
+                  className="px-6 py-2 bg-white text-black rounded-lg hover:bg-gray-100 transition-colors"
+                >
+                  Sign Up
+                </Link>
+              </>
+            )}
           </div>
 
           <button
@@ -65,12 +74,32 @@ export default function Header() {
               <Link href="/dashboard" className="text-gray-300 hover:text-white py-2">
                 Dashboard
               </Link>
-              <Link href="/auth/signin" className="text-gray-300 hover:text-white py-2">
-                Sign In
-              </Link>
-              <Link href="/auth/signup" className="text-gray-300 hover:text-white py-2">
-                Sign Up
-              </Link>
+              {user ? (
+                <div className="pt-2 border-t border-gray-700">
+                  <p className="text-sm text-gray-400 py-2">{user.email}</p>
+                  <Link href="/profile" className="text-gray-300 hover:text-white py-2">
+                    Profile
+                  </Link>
+                  <button
+                    onClick={() => {
+                      // Call signOut from the existing auth context
+                      window.location.href = '/auth/signin'
+                    }}
+                    className="text-red-400 hover:text-red-300 py-2 text-left w-full"
+                  >
+                    Sign Out
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <Link href="/auth/signin" className="text-gray-300 hover:text-white py-2">
+                    Sign In
+                  </Link>
+                  <Link href="/auth/signup" className="text-gray-300 hover:text-white py-2">
+                    Sign Up
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         )}

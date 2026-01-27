@@ -82,8 +82,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error(error.message || 'Failed to create account')
       }
 
-      // User will need to verify email before they can sign in
-      router.push('/auth/signin')
+      // Redirect to profile setup after signup
+      router.push('/profile')
     } catch (error) {
       console.error('Signup error:', error)
       throw error

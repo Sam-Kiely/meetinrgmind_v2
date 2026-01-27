@@ -53,22 +53,6 @@ export default function PricingPage() {
 
   const plans = [
     {
-      name: 'Pay As You Go',
-      price: '$0.50',
-      period: '/meeting',
-      description: 'Perfect for occasional users',
-      features: [
-        'Process individual meetings',
-        'All AI analysis features',
-        'Email generation',
-        'No subscription required'
-      ],
-      cta: 'Coming Soon',
-      action: null,
-      popular: false,
-      disabled: true
-    },
-    {
       name: 'Individual',
       price: '$9',
       period: '/month',
@@ -87,21 +71,21 @@ export default function PricingPage() {
     },
     {
       name: 'Team',
-      price: '$29',
-      period: '/month',
-      description: 'For teams up to 10 members',
+      price: 'Coming Soon',
+      period: '',
+      description: 'For teams and organizations',
       features: [
         'Everything in Individual',
-        'Up to 10 team members',
+        'Multiple team members',
         'Shared meeting library',
         'Team analytics',
         'Admin dashboard',
-        'Priority support'
+        'Custom integrations'
       ],
-      cta: 'Coming Soon',
-      action: null,
+      cta: 'Contact Us',
+      action: () => window.location.href = 'mailto:team@getmeetingmind.com',
       popular: false,
-      disabled: true
+      disabled: false
     }
   ]
 
@@ -117,7 +101,7 @@ export default function PricingPage() {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+        <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
           {plans.map((plan, index) => (
             <div
               key={index}
