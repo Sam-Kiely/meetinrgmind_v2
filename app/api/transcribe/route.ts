@@ -24,14 +24,22 @@ export async function POST(request: NextRequest) {
       }
 
       try {
+        console.log('Processing audio transcription request')
+        console.log('Audio URL:', audioUrl?.substring(0, 100) + '...')
+        console.log('Audio Path:', audioPath)
+
         // Get a signed URL using service role for secure access
+        console.log('Creating signed URL for path:', audioPath)
         const signedUrl = await getSignedUrlServer(audioPath, 3600)
-        console.log('Got signed URL for secure transcription')
+        console.log('Got signed URL for secure transcription:', signedUrl?.substring(0, 100) + '...')
 
         // Transcribe from the signed URL
+        console.log('Starting transcription process')
         const transcript = await transcribeAudioFromUrl(signedUrl)
+        console.log('Transcription completed, length:', transcript?.length)
 
         // Clean up the file after transcription
+        console.log('Cleaning up temporary files')
         await deleteTemporaryAudio(audioUrl, [audioPath])
 
         return NextResponse.json({
@@ -39,7 +47,13 @@ export async function POST(request: NextRequest) {
           message: 'Audio transcribed successfully'
         })
       } catch (error) {
-        console.error('Transcription error:', error)
+        console.error('Transcription error details:', {
+          error: error instanceof Error ? error.message : error,
+          stack: error instanceof Error ? error.stack : undefined,
+          audioUrl: audioUrl?.substring(0, 100) + '...',
+          audioPath: audioPath
+        })
+
         const errorMessage = error instanceof Error ? error.message : 'Unknown error'
         return NextResponse.json(
           { error: `Transcription failed: ${errorMessage}` },

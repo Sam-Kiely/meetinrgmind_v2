@@ -65,9 +65,7 @@ export function validateAudioFile(file: File): { isValid: boolean; error?: strin
 
 export async function transcribeAudioFromUrl(url: string): Promise<string> {
   try {
-    // OpenAI's Whisper API doesn't accept URLs directly
-    // We need to download the file first
-    console.log('Fetching audio from URL:', url)
+    console.log('Starting transcription from URL:', url.substring(0, 100) + '...')
 
     const response = await fetch(url, {
       headers: {
@@ -75,25 +73,43 @@ export async function transcribeAudioFromUrl(url: string): Promise<string> {
       }
     })
 
+    console.log('Fetch response status:', response.status, response.statusText)
+    console.log('Content-Type:', response.headers.get('content-type'))
+    console.log('Content-Length:', response.headers.get('content-length'))
+
     if (!response.ok) {
       console.error('Failed to fetch audio:', response.status, response.statusText)
-      throw new Error(`Failed to fetch audio from URL: ${response.status}`)
+      throw new Error(`Failed to fetch audio from URL: ${response.status} ${response.statusText}`)
     }
 
     const arrayBuffer = await response.arrayBuffer()
-    const buffer = Buffer.from(arrayBuffer)
+    console.log('Downloaded arrayBuffer size:', arrayBuffer.byteLength)
 
-    // Create a File object from the buffer
-    const file = new File([buffer], 'audio.mp3', {
-      type: response.headers.get('content-type') || 'audio/mpeg'
-    })
+    // OpenAI requires a Blob or File, not Buffer
+    const contentType = response.headers.get('content-type') || 'audio/mpeg'
+    const blob = new Blob([arrayBuffer], { type: contentType })
 
-    console.log('File created, size:', file.size, 'type:', file.type)
+    // Create File from Blob for Whisper API
+    const file = new File([blob], 'audio.mp3', { type: contentType })
+
+    console.log('Created file for Whisper - Size:', file.size, 'Type:', file.type)
+
+    // Validate file before sending to Whisper
+    if (file.size === 0) {
+      throw new Error('Downloaded audio file is empty')
+    }
+
+    if (file.size > 25 * 1024 * 1024) {
+      throw new Error('Audio file exceeds Whisper 25MB limit')
+    }
 
     return await transcribeAudio(file)
   } catch (error) {
     console.error('Error transcribing audio from URL:', error)
-    throw new Error('Failed to transcribe audio from URL')
+    if (error instanceof Error) {
+      throw new Error(`Failed to transcribe audio from URL: ${error.message}`)
+    }
+    throw new Error('Failed to transcribe audio from URL: Unknown error')
   }
 }
 
