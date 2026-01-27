@@ -34,30 +34,61 @@ export default function ActionItemsView({ view, onClose }: ActionItemsViewProps)
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) return
 
-      // Fetch all meetings with their action items
+      // Fetch all meetings with their action items and results
       const { data: meetings, error } = await supabase
         .from('meetings')
-        .select('id, title, meeting_date, action_items')
+        .select('id, title, meeting_date, action_items, results')
         .eq('user_id', session.user.id)
         .order('meeting_date', { ascending: false })
 
-      if (error) throw error
+      if (error) {
+        console.error('Error fetching meetings:', error)
+        throw error
+      }
+
+      console.log('Fetched meetings:', meetings) // Debug log
 
       // Flatten and filter action items based on view
       const allItems: ActionItem[] = []
       meetings?.forEach((meeting: any) => {
-        const items = meeting.action_items as any[] || []
-        items.forEach(item => {
-          if ((view === 'outstanding' && !item.completed) ||
-              (view === 'completed' && item.completed)) {
-            allItems.push({
-              ...item,
+        // Try multiple sources for action items
+        let items = meeting.action_items
+
+        // If action_items is null/empty, try results.actionItems
+        if ((!items || items.length === 0) && meeting.results?.actionItems) {
+          items = meeting.results.actionItems.map((item: any, index: number) => ({
+            id: item.id || `${meeting.id}-${index}`,
+            task: item.task,
+            owner: item.owner,
+            deadline: item.deadline,
+            priority: item.priority || 'medium',
+            completed: item.completed || false
+          }))
+        }
+
+        console.log(`Meeting ${meeting.title} action items:`, items) // Debug log
+
+        if (Array.isArray(items) && items.length > 0) {
+          items.forEach((item: any) => {
+            // Ensure item has required fields
+            const actionItem = {
+              id: item.id || Math.random().toString(36),
+              task: item.task || '',
+              owner: item.owner || '',
+              deadline: item.deadline || '',
+              priority: item.priority || 'medium' as 'high' | 'medium' | 'low',
+              completed: item.completed || false,
               meeting_id: meeting.id,
               meeting_title: meeting.title,
               meeting_date: meeting.meeting_date
-            })
-          }
-        })
+            }
+
+            if ((view === 'outstanding' && !actionItem.completed) ||
+                (view === 'completed' && actionItem.completed)) {
+              allItems.push(actionItem)
+            }
+          })
+        }
       })
 
       // Group by meeting

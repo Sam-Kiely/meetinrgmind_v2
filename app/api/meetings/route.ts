@@ -88,6 +88,7 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    // First get meetings with their results
     const { data: meetings, error } = await (supabaseAdmin as any)
       .from('meetings')
       .select(`
@@ -96,10 +97,31 @@ export async function GET(request: NextRequest) {
         meeting_date,
         created_at,
         results,
-        action_items:action_items(*)
+        action_items
       `)
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
+
+    if (!error && meetings) {
+      // Process each meeting to ensure action_items are available
+      meetings.forEach((meeting: any) => {
+        // If action_items field is not populated, extract from results
+        if (!meeting.action_items && meeting.results?.actionItems) {
+          meeting.action_items = meeting.results.actionItems.map((item: any, index: number) => ({
+            id: item.id || `${meeting.id}-${index}`,
+            task: item.task,
+            owner: item.owner,
+            deadline: item.deadline,
+            priority: item.priority || 'medium',
+            completed: item.completed || false
+          }))
+        }
+        // Ensure action_items is always an array
+        if (!meeting.action_items) {
+          meeting.action_items = []
+        }
+      })
+    }
 
     if (error) {
       console.error('Error fetching meetings:', error)
