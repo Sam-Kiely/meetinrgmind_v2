@@ -51,7 +51,3 @@ export async function POST(request: NextRequest) {
     )
   }
 }
-
-// Set max duration and max file size for the API route
-export const maxDuration = 300 // 5 minutes
-export const runtime = 'nodejs'
