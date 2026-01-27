@@ -85,12 +85,40 @@ export async function transcribeAudioFromUrl(url: string): Promise<string> {
     const arrayBuffer = await response.arrayBuffer()
     console.log('Downloaded arrayBuffer size:', arrayBuffer.byteLength)
 
-    // OpenAI requires a Blob or File, not Buffer
-    const contentType = response.headers.get('content-type') || 'audio/mpeg'
-    const blob = new Blob([arrayBuffer], { type: contentType })
+    // Fix MIME type for Whisper API compatibility
+    let contentType = response.headers.get('content-type') || 'audio/mpeg'
+
+    // Map problematic MIME types to Whisper-compatible ones
+    const mimeTypeMap: { [key: string]: string } = {
+      'audio/x-m4a': 'audio/m4a',
+      'audio/x-mp4': 'audio/mp4',
+      'video/mp4': 'audio/mp4',
+      'video/webm': 'audio/webm'
+    }
+
+    const whisperCompatibleType = mimeTypeMap[contentType] || contentType
+    console.log('Original MIME type:', contentType)
+    console.log('Whisper-compatible MIME type:', whisperCompatibleType)
+
+    const blob = new Blob([arrayBuffer], { type: whisperCompatibleType })
+
+    // Use appropriate file extension based on MIME type
+    const fileExtensions: { [key: string]: string } = {
+      'audio/m4a': 'audio.m4a',
+      'audio/mp4': 'audio.mp4',
+      'audio/mpeg': 'audio.mp3',
+      'audio/mp3': 'audio.mp3',
+      'audio/wav': 'audio.wav',
+      'audio/webm': 'audio.webm',
+      'audio/ogg': 'audio.ogg',
+      'audio/flac': 'audio.flac'
+    }
+
+    const fileName = fileExtensions[whisperCompatibleType] || 'audio.mp3'
+    console.log('Using filename:', fileName)
 
     // Create File from Blob for Whisper API
-    const file = new File([blob], 'audio.mp3', { type: contentType })
+    const file = new File([blob], fileName, { type: whisperCompatibleType })
 
     console.log('Created file for Whisper - Size:', file.size, 'Type:', file.type)
 
