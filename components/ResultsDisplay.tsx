@@ -1,12 +1,79 @@
-import { MeetingAnalysis } from '@/types'
+'use client'
+
+import { useState } from 'react'
+import { MeetingAnalysis, Participant } from '@/types'
 import ActionItemCard from './ActionItemCard'
 import { EmailSection } from './EmailSection'
+import ParticipantCard from './ParticipantCard'
 
 interface ResultsDisplayProps {
   analysis: MeetingAnalysis
 }
 
 export default function ResultsDisplay({ analysis }: ResultsDisplayProps) {
+  const [participants, setParticipants] = useState(analysis.participants)
+  const [showRefreshPrompt, setShowRefreshPrompt] = useState(false)
+  const [refreshingEmails, setRefreshingEmails] = useState(false)
+
+  const handleParticipantUpdate = async (updatedParticipant: Participant) => {
+    const index = participants.findIndex(p => p.name === analysis.participants.find(ap => ap.name === updatedParticipant.name)?.name)
+    const newParticipants = [...participants]
+    newParticipants[index] = updatedParticipant
+    setParticipants(newParticipants)
+
+    // Check if this is a meaningful change
+    const originalParticipant = analysis.participants[index]
+    const roleChanged = originalParticipant.role !== updatedParticipant.role
+    const companyChanged = originalParticipant.company !== updatedParticipant.company
+
+    if (roleChanged || companyChanged) {
+      setShowRefreshPrompt(true)
+    }
+  }
+
+  const handleAddToContacts = async (participant: Participant) => {
+    try {
+      const response = await fetch('/api/participants/contacts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(participant)
+      })
+
+      if (response.ok) {
+        // Show success toast or notification
+        console.log('Added to contacts')
+      }
+    } catch (error) {
+      console.error('Error adding to contacts:', error)
+    }
+  }
+
+  const handleRefreshEmails = async () => {
+    setRefreshingEmails(true)
+    setShowRefreshPrompt(false)
+
+    try {
+      // Call API to regenerate emails with updated participant info
+      const response = await fetch('/api/analyze/refresh-emails', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          transcript: analysis.summary, // We'd need to store this
+          participants: participants
+        })
+      })
+
+      if (response.ok) {
+        const { emails } = await response.json()
+        // Update emails in the analysis
+        analysis.followUpEmails = emails
+      }
+    } catch (error) {
+      console.error('Error refreshing emails:', error)
+    } finally {
+      setRefreshingEmails(false)
+    }
+  }
   return (
     <div className="max-w-6xl mx-auto space-y-8">
       <div className="text-center">
@@ -21,29 +88,44 @@ export default function ResultsDisplay({ analysis }: ResultsDisplayProps) {
 
       <div className="bg-white rounded-xl shadow-lg p-8">
         <h3 className="text-2xl font-bold text-gray-900 mb-6">👥 Meeting Participants</h3>
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {analysis.participants.map((participant, index) => (
-            <div key={index} className="border border-gray-200 rounded-lg p-4">
-              <div className="flex items-start">
-                <div className="flex-shrink-0 w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
-                  <span className="text-gray-600 font-medium text-sm">
-                    {participant.name.split(' ').map(n => n[0]).join('').toUpperCase()}
-                  </span>
-                </div>
-                <div className="ml-3 flex-1">
-                  <h4 className="font-semibold text-gray-900">{participant.name}</h4>
-                  {participant.title && (
-                    <p className="text-sm text-gray-600">{participant.title}</p>
-                  )}
-                  {participant.role && (
-                    <p className="text-xs text-gray-500">{participant.role}</p>
-                  )}
-                  {participant.company && (
-                    <p className="text-xs text-blue-600">{participant.company}</p>
-                  )}
-                </div>
+
+        {showRefreshPrompt && (
+          <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-blue-900 font-medium">Participant changes detected</p>
+                <p className="text-xs text-blue-700 mt-1">
+                  Would you like to regenerate emails with updated participant information?
+                  <span className="text-blue-600"> (costs ~$0.05)</span>
+                </p>
+              </div>
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => setShowRefreshPrompt(false)}
+                  className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800"
+                >
+                  Skip
+                </button>
+                <button
+                  onClick={handleRefreshEmails}
+                  disabled={refreshingEmails}
+                  className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {refreshingEmails ? 'Refreshing...' : 'Refresh Emails'}
+                </button>
               </div>
             </div>
+          </div>
+        )}
+
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {participants.map((participant, index) => (
+            <ParticipantCard
+              key={index}
+              participant={participant}
+              onUpdate={handleParticipantUpdate}
+              onAddToContacts={handleAddToContacts}
+            />
           ))}
         </div>
       </div>

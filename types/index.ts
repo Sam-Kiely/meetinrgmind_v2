@@ -23,6 +23,9 @@ export interface MeetingParticipant {
   company?: string
 }
 
+// Alias for component usage
+export type Participant = MeetingParticipant
+
 // Simple email format - focused on ready-to-send emails
 export interface FollowUpEmail {
   type: 'client_external' | 'internal_team'
