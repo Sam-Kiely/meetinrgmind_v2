@@ -4,8 +4,26 @@ import { transcribeAudio, validateAudioFile } from '@/lib/whisper'
 export const maxDuration = 60 // Maximum function duration: 60 seconds for Vercel
 export const runtime = 'nodejs' // Use Node.js runtime
 
+// Configure body parsing for large audio files
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '25mb',
+    },
+  },
+}
+
 export async function POST(request: NextRequest) {
   try {
+    // Check content length before processing
+    const contentLength = request.headers.get('content-length')
+    if (contentLength && parseInt(contentLength) > 25 * 1024 * 1024) {
+      return NextResponse.json(
+        { error: 'File size exceeds 25MB limit' },
+        { status: 413 }
+      )
+    }
+
     const formData = await request.formData()
     const audioFile = formData.get('audio') as File
 
