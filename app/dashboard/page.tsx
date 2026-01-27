@@ -111,10 +111,26 @@ function DashboardContent() {
         })
         setMeetings(updatedMeetings)
 
-        // TODO: Persist to database - currently has type issues with JSONB field
-        // The update is reflected in the UI state
+        // Persist to database using API endpoint
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session) {
+          try {
+            const response = await fetch(`/api/meetings/${selectedMeeting.id}/action-items`, {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${session.access_token}`
+              },
+              body: JSON.stringify({ actionItems: updatedActionItems })
+            })
 
-        // Note: In production, this would sync with the database
+            if (!response.ok) {
+              console.error('Error saving action item status')
+            }
+          } catch (error) {
+            console.error('Error saving action item status:', error)
+          }
+        }
       }
 
     } catch (err) {
@@ -145,10 +161,26 @@ function DashboardContent() {
         })
         setMeetings(updatedMeetings)
 
-        // TODO: Persist to database - currently has type issues with JSONB field
-        // The update is reflected in the UI state
+        // Persist to database using API endpoint
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session) {
+          try {
+            const response = await fetch(`/api/meetings/${selectedMeeting.id}/action-items`, {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${session.access_token}`
+              },
+              body: JSON.stringify({ actionItems: updatedActionItems })
+            })
 
-        // Note: In production, this would sync with the database
+            if (!response.ok) {
+              console.error('Error saving action item status')
+            }
+          } catch (error) {
+            console.error('Error saving action item status:', error)
+          }
+        }
       }
 
     } catch (err) {

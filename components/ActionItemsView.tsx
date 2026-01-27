@@ -78,10 +78,48 @@ export default function ActionItemsView({ view, onClose }: ActionItemsViewProps)
   }
 
   const handleToggleComplete = async (item: ActionItem) => {
-    // TODO: Implement persistence when type issues are resolved
-    // For now, just refresh to show current state
-    alert('Action item completion tracking will be saved in the meeting detail view.')
-    fetchActionItems()
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return
+
+      // Get the current meeting's action items
+      const { data: meeting, error: fetchError } = await supabase
+        .from('meetings')
+        .select('action_items')
+        .eq('id', item.meeting_id)
+        .single()
+
+      if (fetchError || !meeting) {
+        console.error('Error fetching meeting:', fetchError)
+        return
+      }
+
+      // Update the specific action item
+      const updatedItems = ((meeting as any).action_items as any[] || []).map(ai =>
+        ai.id === item.id ? { ...ai, completed: !item.completed } : ai
+      )
+
+      // Save using the API endpoint
+      const response = await fetch(`/api/meetings/${item.meeting_id}/action-items`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ actionItems: updatedItems })
+      })
+
+      if (response.ok) {
+        // Refresh the list to show updated state
+        fetchActionItems()
+      } else {
+        console.error('Failed to update action item')
+        alert('Failed to update action item. Please try again.')
+      }
+    } catch (error) {
+      console.error('Error updating action item:', error)
+      alert('An error occurred while updating the action item.')
+    }
   }
 
   const getPriorityColor = (priority: string) => {
