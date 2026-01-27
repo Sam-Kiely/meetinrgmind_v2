@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { transcribeAudio, transcribeAudioFromUrl, transcribeAudioChunks } from '@/lib/whisper'
-import { uploadAudioToStorage } from '@/lib/storage'
+import { uploadAudioToStorage, deleteTemporaryAudio } from '@/lib/storage'
 import { validateAudioFile } from '@/lib/whisper'
 
 export const maxDuration = 60 // Maximum function duration: 60 seconds for Vercel
@@ -43,11 +43,16 @@ export async function POST(request: NextRequest) {
       // Upload to Supabase Storage
       const { url, chunks } = await uploadAudioToStorage(audioFile, userId)
 
-      // Transcribe based on whether it was chunked
-      if (chunks && chunks.length > 1) {
-        transcript = await transcribeAudioChunks(chunks)
-      } else {
-        transcript = await transcribeAudioFromUrl(url)
+      try {
+        // Transcribe based on whether it was chunked
+        if (chunks && chunks.length > 1) {
+          transcript = await transcribeAudioChunks(chunks)
+        } else {
+          transcript = await transcribeAudioFromUrl(url)
+        }
+      } finally {
+        // Clean up temporary audio files after transcription
+        await deleteTemporaryAudio(url, chunks)
       }
     } else {
       // Small files can go directly to Whisper

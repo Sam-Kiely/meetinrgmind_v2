@@ -121,6 +121,24 @@ export async function deleteAudioFromStorage(path: string): Promise<void> {
   }
 }
 
+export async function deleteTemporaryAudio(url: string, chunks?: string[]): Promise<void> {
+  // Delete audio files after transcription to save storage
+  try {
+    if (chunks && chunks.length > 0) {
+      await deleteAudioChunks(chunks)
+    } else if (url) {
+      // Extract path from URL
+      const urlParts = url.split('/storage/v1/object/public/audio-recordings/')
+      if (urlParts[1]) {
+        await deleteAudioFromStorage(urlParts[1])
+      }
+    }
+  } catch (error) {
+    // Don't throw - just log, as cleanup is not critical
+    console.error('Failed to cleanup temporary audio:', error)
+  }
+}
+
 export async function deleteAudioChunks(chunks: string[]): Promise<void> {
   try {
     const { error } = await supabase.storage
