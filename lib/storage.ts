@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { supabaseAdmin } from './supabase-admin'
 import { v4 as uuidv4 } from 'uuid'
 
 const BUCKET_NAME = 'audio-recordings'
@@ -144,10 +145,20 @@ export async function deleteAudioChunks(chunks: string[]): Promise<void> {
 }
 
 export async function getSignedUrl(path: string, expiresIn = 3600): Promise<string> {
-  const { data, error } = await supabase.storage
-    .from(BUCKET_NAME)
-    .createSignedUrl(path, expiresIn)
+  // This should only be called from server-side code
+  // Import dynamically to avoid client-side errors
+  if (typeof window === 'undefined') {
+    const { supabaseAdmin } = await import('./supabase-admin')
+    const { data, error } = await supabaseAdmin.storage
+      .from(BUCKET_NAME)
+      .createSignedUrl(path, expiresIn)
 
-  if (error) throw error
-  return data.signedUrl
+    if (error) {
+      console.error('Error creating signed URL:', error)
+      throw error
+    }
+    return data.signedUrl
+  } else {
+    throw new Error('getSignedUrl can only be called from server-side code')
+  }
 }

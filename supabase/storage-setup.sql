@@ -1,7 +1,8 @@
 -- Create the audio-recordings bucket if it doesn't exist
+-- Set to public=true so files can be accessed via public URLs
 INSERT INTO storage.buckets (id, name, public)
-VALUES ('audio-recordings', 'audio-recordings', false)
-ON CONFLICT (id) DO NOTHING;
+VALUES ('audio-recordings', 'audio-recordings', true)
+ON CONFLICT (id) DO UPDATE SET public = true;
 
 -- Set up RLS policies for the audio-recordings bucket
 -- Allow authenticated users to upload their own files

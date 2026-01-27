@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { transcribeAudio, transcribeAudioFromUrl, transcribeAudioChunks } from '@/lib/whisper'
-import { uploadAudioToStorage, deleteTemporaryAudio } from '@/lib/storage'
+import { uploadAudioToStorage, deleteTemporaryAudio, getSignedUrl } from '@/lib/storage'
 import { validateAudioFile } from '@/lib/whisper'
 
 export const maxDuration = 60 // Maximum function duration: 60 seconds for Vercel
@@ -22,16 +22,28 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      // Transcribe from URL
-      const transcript = await transcribeAudioFromUrl(audioUrl)
+      try {
+        // Since the bucket is public, we can use the public URL directly
+        console.log('Transcribing from public URL:', audioUrl)
 
-      // Clean up the file after transcription
-      await deleteTemporaryAudio(audioUrl, [audioPath])
+        // Transcribe from the public URL
+        const transcript = await transcribeAudioFromUrl(audioUrl)
 
-      return NextResponse.json({
-        transcript: transcript.trim(),
-        message: 'Audio transcribed successfully'
-      })
+        // Clean up the file after transcription
+        await deleteTemporaryAudio(audioUrl, [audioPath])
+
+        return NextResponse.json({
+          transcript: transcript.trim(),
+          message: 'Audio transcribed successfully'
+        })
+      } catch (error) {
+        console.error('Transcription error:', error)
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+        return NextResponse.json(
+          { error: `Transcription failed: ${errorMessage}` },
+          { status: 500 }
+        )
+      }
     }
 
     // Handle FormData requests (legacy/small files)

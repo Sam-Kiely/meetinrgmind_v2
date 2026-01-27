@@ -67,14 +67,30 @@ export function validateAudioFile(file: File): { isValid: boolean; error?: strin
 
 export async function transcribeAudioFromUrl(url: string): Promise<string> {
   try {
-    // Fetch the audio file from URL
-    const response = await fetch(url)
+    // OpenAI's Whisper API doesn't accept URLs directly
+    // We need to download the file first
+    console.log('Fetching audio from URL:', url)
+
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'MeetingMind/1.0'
+      }
+    })
+
     if (!response.ok) {
-      throw new Error('Failed to fetch audio from URL')
+      console.error('Failed to fetch audio:', response.status, response.statusText)
+      throw new Error(`Failed to fetch audio from URL: ${response.status}`)
     }
 
-    const blob = await response.blob()
-    const file = new File([blob], 'audio.mp3', { type: blob.type })
+    const arrayBuffer = await response.arrayBuffer()
+    const buffer = Buffer.from(arrayBuffer)
+
+    // Create a File object from the buffer
+    const file = new File([buffer], 'audio.mp3', {
+      type: response.headers.get('content-type') || 'audio/mpeg'
+    })
+
+    console.log('File created, size:', file.size, 'type:', file.type)
 
     return await transcribeAudio(file)
   } catch (error) {
