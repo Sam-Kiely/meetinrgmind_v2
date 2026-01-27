@@ -112,12 +112,19 @@ Sarah: Sounds good. I'll send a calendar invite. Thanks John!`
   }
 
   const transcribeAudio = async (file: File): Promise<string> => {
+    // CRITICAL: Files over 4MB MUST use storage to avoid Vercel's limit
+    const mustUseStorage = file.size > 4 * 1024 * 1024
+
+    if (mustUseStorage && !user?.id) {
+      throw new Error('Please sign in to upload files larger than 4MB')
+    }
+
     const formData = new FormData()
     formData.append('audio', file)
 
-    // Add user ID if available for files > 4MB (will use Supabase Storage)
-    if (user?.id && file.size > 4 * 1024 * 1024) {
-      formData.append('userId', user.id)
+    // Force storage route for large files
+    if (mustUseStorage) {
+      formData.append('userId', user!.id)
       formData.append('useStorage', 'true')
     }
 
@@ -127,8 +134,20 @@ Sarah: Sounds good. I'll send a calendar invite. Thanks John!`
     })
 
     if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.error || 'Failed to transcribe audio')
+      // Handle 413 specifically
+      if (response.status === 413) {
+        throw new Error('File too large. Please sign in to upload files over 4MB.')
+      }
+
+      let errorMessage = 'Failed to transcribe audio'
+      try {
+        const errorData = await response.json()
+        errorMessage = errorData.error || errorMessage
+      } catch {
+        // If JSON parsing fails, use status text
+        errorMessage = `Failed to transcribe audio (${response.status})`
+      }
+      throw new Error(errorMessage)
     }
 
     const data = await response.json()
@@ -172,6 +191,12 @@ Sarah: Sounds good. I'll send a calendar invite. Thanks John!`
         // Check for consent one more time before processing audio
         if (!hasAcknowledged) {
           setShowDisclaimer(true)
+          return
+        }
+
+        // Check if user is signed in for large files
+        if (selectedFile.size > 4 * 1024 * 1024 && !user?.id) {
+          setError('Please sign in to upload files larger than 4MB')
           return
         }
 

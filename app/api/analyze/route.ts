@@ -16,14 +16,25 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Check if API key is configured
+    if (!process.env.ANTHROPIC_API_KEY) {
+      console.error('ANTHROPIC_API_KEY is not configured')
+      return NextResponse.json(
+        { error: 'Analysis service is not configured. Please contact support.' },
+        { status: 503 }
+      )
+    }
+
     const analysis = await analyzeMeetingTranscript(body.transcript)
 
     return NextResponse.json(analysis)
   } catch (error) {
     console.error('Error in analyze API:', error)
 
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+
     return NextResponse.json(
-      { error: 'Failed to analyze transcript' },
+      { error: `Failed to analyze transcript: ${errorMessage}` },
       { status: 500 }
     )
   }

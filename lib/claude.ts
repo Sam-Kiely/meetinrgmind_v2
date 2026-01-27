@@ -107,6 +107,10 @@ Return ONLY valid JSON, no markdown or additional text.`
 
 export async function analyzeMeetingTranscript(transcript: string): Promise<MeetingAnalysis> {
   try {
+    if (!process.env.ANTHROPIC_API_KEY) {
+      throw new Error('ANTHROPIC_API_KEY is not configured')
+    }
+
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 4096,
@@ -145,6 +149,20 @@ export async function analyzeMeetingTranscript(transcript: string): Promise<Meet
   } catch (error) {
     console.error('Error analyzing transcript:', error)
     console.error('Raw response:', error instanceof SyntaxError ? 'JSON parse error' : error)
+
+    if (error instanceof Error) {
+      // Check for specific error types
+      if (error.message.includes('API_KEY')) {
+        throw new Error('Analysis service is not configured. Please check your API keys.')
+      }
+      if (error.message.includes('rate limit')) {
+        throw new Error('Service is temporarily unavailable. Please try again later.')
+      }
+      if (error.message.includes('Invalid API Key')) {
+        throw new Error('Analysis service authentication failed. Please contact support.')
+      }
+    }
+
     throw new Error('Failed to analyze transcript')
   }
 }
