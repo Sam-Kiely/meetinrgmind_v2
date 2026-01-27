@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { MeetingAnalysis } from '@/types'
@@ -26,7 +26,7 @@ interface SavedMeeting {
   }>
 }
 
-export default function DashboardPage() {
+function DashboardContent() {
   const [meetings, setMeetings] = useState<SavedMeeting[]>([])
   const [selectedMeeting, setSelectedMeeting] = useState<SavedMeeting | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -584,5 +584,17 @@ export default function DashboardPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+      </div>
+    }>
+      <DashboardContent />
+    </Suspense>
   )
 }
