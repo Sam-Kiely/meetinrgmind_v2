@@ -6,6 +6,7 @@ import { RecordingDisclaimer } from './RecordingDisclaimer'
 import { useRecordingDisclaimer } from '@/hooks/useRecordingDisclaimer'
 import { supabase } from '@/lib/supabase'
 import { User } from '@supabase/supabase-js'
+import { uploadAudioDirectly, transcribeFromUrl } from '@/lib/client-upload'
 
 interface UploadSectionProps {
   onAnalysisComplete: (analysis: MeetingAnalysis, transcript: string) => void
@@ -112,21 +113,22 @@ Sarah: Sounds good. I'll send a calendar invite. Thanks John!`
   }
 
   const transcribeAudio = async (file: File): Promise<string> => {
-    // CRITICAL: Files over 4MB MUST use storage to avoid Vercel's limit
-    const mustUseStorage = file.size > 4 * 1024 * 1024
+    // For files over 4MB, upload directly to Supabase first
+    if (file.size > 4 * 1024 * 1024) {
+      if (!user?.id) {
+        throw new Error('Please sign in to upload files larger than 4MB')
+      }
 
-    if (mustUseStorage && !user?.id) {
-      throw new Error('Please sign in to upload files larger than 4MB')
+      // Upload directly to Supabase Storage
+      const { url, path } = await uploadAudioDirectly(file)
+
+      // Transcribe from the uploaded URL
+      return await transcribeFromUrl(url, path)
     }
 
+    // Small files can still go through FormData
     const formData = new FormData()
     formData.append('audio', file)
-
-    // Force storage route for large files
-    if (mustUseStorage) {
-      formData.append('userId', user!.id)
-      formData.append('useStorage', 'true')
-    }
 
     const response = await fetch('/api/transcribe', {
       method: 'POST',
@@ -134,17 +136,11 @@ Sarah: Sounds good. I'll send a calendar invite. Thanks John!`
     })
 
     if (!response.ok) {
-      // Handle 413 specifically
-      if (response.status === 413) {
-        throw new Error('File too large. Please sign in to upload files over 4MB.')
-      }
-
       let errorMessage = 'Failed to transcribe audio'
       try {
         const errorData = await response.json()
         errorMessage = errorData.error || errorMessage
       } catch {
-        // If JSON parsing fails, use status text
         errorMessage = `Failed to transcribe audio (${response.status})`
       }
       throw new Error(errorMessage)
@@ -200,13 +196,8 @@ Sarah: Sounds good. I'll send a calendar invite. Thanks John!`
           return
         }
 
-        // Show uploading status for large files
-        if (selectedFile.size > 4 * 1024 * 1024) {
-          setProcessingStep('uploading')
-          setUploadProgress(0)
-        } else {
-          setProcessingStep('transcribing')
-        }
+        // Set appropriate processing step
+        setProcessingStep(selectedFile.size > 4 * 1024 * 1024 ? 'uploading' : 'transcribing')
 
         finalTranscript = await transcribeAudio(selectedFile)
         setTranscript(finalTranscript) // Update transcript display

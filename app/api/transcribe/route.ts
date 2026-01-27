@@ -8,6 +8,33 @@ export const runtime = 'nodejs' // Use Node.js runtime
 
 export async function POST(request: NextRequest) {
   try {
+    // Check content type to determine request format
+    const contentType = request.headers.get('content-type') || ''
+
+    // Handle JSON requests (from URL-based transcription)
+    if (contentType.includes('application/json')) {
+      const { audioUrl, audioPath } = await request.json()
+
+      if (!audioUrl || !audioPath) {
+        return NextResponse.json(
+          { error: 'Audio URL and path are required' },
+          { status: 400 }
+        )
+      }
+
+      // Transcribe from URL
+      const transcript = await transcribeAudioFromUrl(audioUrl)
+
+      // Clean up the file after transcription
+      await deleteTemporaryAudio(audioUrl, [audioPath])
+
+      return NextResponse.json({
+        transcript: transcript.trim(),
+        message: 'Audio transcribed successfully'
+      })
+    }
+
+    // Handle FormData requests (legacy/small files)
     const formData = await request.formData()
     const audioFile = formData.get('audio') as File
     const userId = formData.get('userId') as string
