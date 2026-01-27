@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Participant } from '@/types'
 import { createClient } from '@supabase/supabase-js'
 
@@ -22,6 +22,11 @@ export default function ParticipantCard({
   const [isSaving, setIsSaving] = useState(false)
   const [addedToContacts, setAddedToContacts] = useState(isInContacts)
   const [isAdding, setIsAdding] = useState(false)
+
+  // Update addedToContacts when isInContacts prop changes
+  useEffect(() => {
+    setAddedToContacts(isInContacts)
+  }, [isInContacts])
 
   const handleSave = async () => {
     setIsSaving(true)

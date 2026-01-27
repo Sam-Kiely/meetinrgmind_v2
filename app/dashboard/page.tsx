@@ -45,13 +45,15 @@ export default function DashboardPage() {
   // Handle URL parameter for direct meeting navigation
   useEffect(() => {
     const meetingIdFromUrl = searchParams.get('meeting')
-    if (meetingIdFromUrl && meetings.length > 0) {
+    if (meetingIdFromUrl && meetings.length > 0 && !selectedMeeting) {
       const meeting = meetings.find(m => m.id === meetingIdFromUrl)
       if (meeting) {
         setSelectedMeeting(meeting)
+        // Clear the URL parameter to avoid issues with navigation
+        window.history.replaceState({}, '', '/dashboard')
       }
     }
-  }, [searchParams, meetings])
+  }, [searchParams, meetings, selectedMeeting])
 
   const fetchMeetings = async () => {
     if (!user?.id) {

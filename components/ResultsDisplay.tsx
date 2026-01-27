@@ -45,7 +45,10 @@ export default function ResultsDisplay({ analysis }: ResultsDisplayProps) {
         const existingNames = new Set<string>(
           data.contacts?.map((contact: any) => contact.name as string) || []
         )
+        console.log('Loaded contacts from bank:', existingNames)
         setContactsInBank(existingNames)
+      } else {
+        console.log('Failed to load contacts:', response.status)
       }
     } catch (error) {
       console.error('Error loading existing contacts:', error)
@@ -256,15 +259,19 @@ export default function ResultsDisplay({ analysis }: ResultsDisplayProps) {
         )}
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {participants.map((participant, index) => (
-            <ParticipantCard
-              key={index}
-              participant={participant}
-              onUpdate={handleParticipantUpdate}
-              onAddToContacts={handleAddToContacts}
-              isInContacts={contactsInBank.has(participant.name)}
-            />
-          ))}
+          {participants.map((participant, index) => {
+            const isInBank = contactsInBank.has(participant.name)
+            console.log(`Participant ${participant.name} in bank:`, isInBank, 'Bank has:', Array.from(contactsInBank))
+            return (
+              <ParticipantCard
+                key={index}
+                participant={participant}
+                onUpdate={handleParticipantUpdate}
+                onAddToContacts={handleAddToContacts}
+                isInContacts={isInBank}
+              />
+            )
+          })}
         </div>
       </div>
 
