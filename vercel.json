@@ -1,0 +1,16 @@
+{
+  "functions": {
+    "app/api/transcribe/route.ts": {
+      "maxDuration": 60
+    },
+    "app/api/analyze/route.ts": {
+      "maxDuration": 60
+    },
+    "app/api/meetings/route.ts": {
+      "maxDuration": 60
+    },
+    "app/api/meetings/[id]/route.ts": {
+      "maxDuration": 60
+    }
+  }
+}

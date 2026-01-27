@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { analyzeMeetingTranscript } from '@/lib/claude'
 import { AnalyzeRequest } from '@/types'
 
+export const maxDuration = 60 // Maximum function duration: 60 seconds for Vercel
+export const runtime = 'nodejs' // Use Node.js runtime
+
 export async function POST(request: NextRequest) {
   try {
     const body: AnalyzeRequest = await request.json()

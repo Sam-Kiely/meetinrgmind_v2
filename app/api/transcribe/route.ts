@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { transcribeAudio, validateAudioFile } from '@/lib/whisper'
 
+export const maxDuration = 60 // Maximum function duration: 60 seconds for Vercel
+export const runtime = 'nodejs' // Use Node.js runtime
+
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
