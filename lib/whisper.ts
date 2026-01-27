@@ -1,6 +1,4 @@
 import OpenAI from 'openai'
-import { supabase } from './supabase'
-import { getSignedUrl } from './storage'
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
@@ -103,9 +101,12 @@ export async function transcribeAudioChunks(chunkPaths: string[]): Promise<strin
   try {
     const transcripts: string[] = []
 
+    // Import server-side function dynamically
+    const { getSignedUrlServer } = await import('./storage-server')
+
     // Transcribe each chunk
     for (const chunkPath of chunkPaths) {
-      const signedUrl = await getSignedUrl(chunkPath)
+      const signedUrl = await getSignedUrlServer(chunkPath)
       const transcript = await transcribeAudioFromUrl(signedUrl)
       transcripts.push(transcript)
     }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { transcribeAudio, transcribeAudioFromUrl, transcribeAudioChunks } from '@/lib/whisper'
-import { uploadAudioToStorage, deleteTemporaryAudio, getSignedUrl } from '@/lib/storage'
+import { uploadAudioToStorage, deleteTemporaryAudio } from '@/lib/storage'
+import { getSignedUrlServer } from '@/lib/storage-server'
 import { validateAudioFile } from '@/lib/whisper'
 
 export const maxDuration = 60 // Maximum function duration: 60 seconds for Vercel
@@ -23,11 +24,12 @@ export async function POST(request: NextRequest) {
       }
 
       try {
-        // Since the bucket is public, we can use the public URL directly
-        console.log('Transcribing from public URL:', audioUrl)
+        // Get a signed URL using service role for secure access
+        const signedUrl = await getSignedUrlServer(audioPath, 3600)
+        console.log('Got signed URL for secure transcription')
 
-        // Transcribe from the public URL
-        const transcript = await transcribeAudioFromUrl(audioUrl)
+        // Transcribe from the signed URL
+        const transcript = await transcribeAudioFromUrl(signedUrl)
 
         // Clean up the file after transcription
         await deleteTemporaryAudio(audioUrl, [audioPath])
