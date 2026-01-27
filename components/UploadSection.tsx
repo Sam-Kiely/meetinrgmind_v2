@@ -7,6 +7,7 @@ import { useRecordingDisclaimer } from '@/hooks/useRecordingDisclaimer'
 import { supabase } from '@/lib/supabase'
 import { User } from '@supabase/supabase-js'
 import { uploadAudioDirectly, transcribeFromUrl } from '@/lib/client-upload'
+import { UsageStatus } from '@/lib/usage'
 
 interface UploadSectionProps {
   onAnalysisComplete: (analysis: MeetingAnalysis, transcript: string) => void
@@ -25,12 +26,34 @@ export default function UploadSection({ onAnalysisComplete }: UploadSectionProps
   const [pendingFile, setPendingFile] = useState<File | null>(null)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [user, setUser] = useState<User | null>(null)
+  const [usageStatus, setUsageStatus] = useState<UsageStatus | null>(null)
+  const [isCheckingUsage, setIsCheckingUsage] = useState(false)
   const { hasAcknowledged, showDisclaimer, setShowDisclaimer, acknowledge } = useRecordingDisclaimer()
 
   useEffect(() => {
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       setUser(user)
+
+      if (user) {
+        // Check usage limits
+        setIsCheckingUsage(true)
+        try {
+          const response = await fetch('/api/usage', {
+            headers: {
+              'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
+            }
+          })
+          if (response.ok) {
+            const usage = await response.json()
+            setUsageStatus(usage)
+          }
+        } catch (error) {
+          console.error('Error checking usage:', error)
+        } finally {
+          setIsCheckingUsage(false)
+        }
+      }
     }
     getUser()
   }, [])
@@ -169,6 +192,18 @@ Sarah: Sounds good. I'll send a calendar invite. Thanks John!`
   const handleProcess = async () => {
     setError('')
 
+    // Require authentication
+    if (!user) {
+      setError('Please sign in to extract action items from meetings')
+      return
+    }
+
+    // Check usage limits
+    if (usageStatus && !usageStatus.canExtract) {
+      setError(usageStatus.message || 'Usage limit exceeded')
+      return
+    }
+
     try {
       let finalTranscript = ''
 
@@ -205,6 +240,33 @@ Sarah: Sounds good. I'll send a calendar invite. Thanks John!`
 
       setProcessingStep('analyzing')
       const analysis = await analyzeTranscript(finalTranscript)
+
+      // Increment usage count after successful analysis
+      if (user) {
+        try {
+          await fetch('/api/usage', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
+            }
+          })
+
+          // Update usage status
+          const response = await fetch('/api/usage', {
+            headers: {
+              'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
+            }
+          })
+          if (response.ok) {
+            const usage = await response.json()
+            setUsageStatus(usage)
+          }
+        } catch (error) {
+          console.error('Error updating usage:', error)
+        }
+      }
+
       onAnalysisComplete(analysis, finalTranscript)
 
     } catch (err) {
@@ -260,6 +322,45 @@ Sarah: Sounds good. I'll send a calendar invite. Thanks John!`
         <p className="text-gray-600 text-lg">
           Upload audio files or paste transcripts to get action items, decisions, and follow-up emails
         </p>
+
+        {/* Usage Status Display */}
+        {!user ? (
+          <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-blue-800 font-medium">🔒 Sign in required</p>
+            <p className="text-blue-600 text-sm mt-1">
+              Please <a href="/auth/signin" className="underline hover:text-blue-800">sign in</a> to extract action items from meetings
+            </p>
+          </div>
+        ) : isCheckingUsage ? (
+          <div className="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+            <p className="text-gray-600">Checking usage limits...</p>
+          </div>
+        ) : usageStatus ? (
+          <div className={`mt-4 p-4 rounded-lg border ${
+            usageStatus.canExtract
+              ? 'bg-green-50 border-green-200'
+              : 'bg-red-50 border-red-200'
+          }`}>
+            <p className={`font-medium ${
+              usageStatus.canExtract ? 'text-green-800' : 'text-red-800'
+            }`}>
+              {usageStatus.hasSubscription
+                ? '✨ Unlimited extracts'
+                : usageStatus.canExtract
+                  ? `🎯 ${3 - usageStatus.extractCount} free extracts remaining`
+                  : '🔒 Free limit reached'
+              }
+            </p>
+            <p className={`text-sm mt-1 ${
+              usageStatus.canExtract ? 'text-green-600' : 'text-red-600'
+            }`}>
+              {usageStatus.message}
+              {!usageStatus.hasSubscription && !usageStatus.canExtract && (
+                <> <a href="/pricing" className="underline hover:font-medium">Subscribe for unlimited access</a></>
+              )}
+            </p>
+          </div>
+        ) : null}
       </div>
 
       {/* Mode Toggle */}
