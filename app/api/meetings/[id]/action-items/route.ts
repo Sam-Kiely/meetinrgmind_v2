@@ -46,19 +46,59 @@ export async function PUT(
       return NextResponse.json({ error: 'Meeting not found or unauthorized' }, { status: 404 })
     }
 
-    // Update the action items - use raw SQL to handle JSONB properly
-    const { data, error: updateError } = await supabaseAdmin
-      .from('meetings')
-      .update({
-        action_items: actionItems,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', meetingId)
-      .select()
+    // Try to update action_items column first (if it exists)
+    // If it fails, update the results field instead
+    let updateError = null
+    let data = null
 
+    try {
+      const updateResult = await supabaseAdmin
+        .from('meetings')
+        .update({
+          action_items: actionItems,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', meetingId)
+        .select()
+
+      data = updateResult.data
+      updateError = updateResult.error
+    } catch (err) {
+      updateError = err
+    }
+
+    // If updating action_items failed (column doesn't exist), update results.actionItems
     if (updateError) {
-      console.error('Error updating action items:', updateError)
-      return NextResponse.json({ error: 'Failed to update action items' }, { status: 500 })
+      console.log('action_items column not available, updating results.actionItems')
+
+      // Get current meeting to update results
+      const { data: currentMeeting } = await supabaseAdmin
+        .from('meetings')
+        .select('results')
+        .eq('id', meetingId)
+        .single()
+
+      if (currentMeeting) {
+        const updatedResults = {
+          ...currentMeeting.results,
+          actionItems: actionItems
+        }
+
+        const { data: updateData, error: resultsError } = await supabaseAdmin
+          .from('meetings')
+          .update({
+            results: updatedResults,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', meetingId)
+          .select()
+
+        if (resultsError) {
+          console.error('Error updating results.actionItems:', resultsError)
+          return NextResponse.json({ error: 'Failed to update action items' }, { status: 500 })
+        }
+        data = updateData
+      }
     }
 
     return NextResponse.json({

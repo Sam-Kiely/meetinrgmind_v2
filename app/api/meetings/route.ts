@@ -19,7 +19,17 @@ export async function POST(request: NextRequest) {
     // Generate a title from the analysis if none provided
     const meetingTitle = title || generateMeetingTitle(analysis)
 
-    // Process action items to ensure they have proper structure
+    // Save meeting to database - action_items will be stored in results for now
+    const meetingData: any = {
+      user_id: userId,
+      title: meetingTitle,
+      transcript,
+      results: analysis,
+      meeting_date: new Date().toISOString(),
+    }
+
+    // Try to add action_items column if it exists
+    // This will work after migration is run
     const processedActionItems = analysis.actionItems?.map((item: any, index: number) => ({
       id: item.id || `ai-${Date.now()}-${index}`,
       task: item.task,
@@ -29,17 +39,14 @@ export async function POST(request: NextRequest) {
       completed: item.completed || false
     })) || []
 
-    // Save meeting to database with action_items field populated
+    // Only add action_items if we have them
+    if (processedActionItems.length > 0) {
+      meetingData.action_items = processedActionItems
+    }
+
     const { data: meeting, error: meetingError } = await (supabaseAdmin as any)
       .from('meetings')
-      .insert({
-        user_id: userId,
-        title: meetingTitle,
-        transcript,
-        results: analysis,
-        action_items: processedActionItems,
-        meeting_date: new Date().toISOString(),
-      })
+      .insert(meetingData)
       .select()
       .single()
 
@@ -82,16 +89,10 @@ export async function GET(request: NextRequest) {
     }
 
     // First get meetings with their results
+    // Note: action_items column may not exist yet, so we select * and handle it
     const { data: meetings, error } = await (supabaseAdmin as any)
       .from('meetings')
-      .select(`
-        id,
-        title,
-        meeting_date,
-        created_at,
-        results,
-        action_items
-      `)
+      .select('*')
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
 
