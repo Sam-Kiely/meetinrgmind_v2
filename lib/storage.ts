@@ -31,17 +31,8 @@ export async function uploadAudioToStorage(
       .from(BUCKET_NAME)
       .upload(fileName, file, {
         cacheControl: '3600',
-        upsert: false,
-        onUploadProgress: (progress) => {
-          if (onProgress) {
-            onProgress({
-              loaded: progress.loaded,
-              total: progress.total,
-              percentage: Math.round((progress.loaded / progress.total) * 100)
-            })
-          }
-        }
-      } as any)
+        upsert: false
+      })
 
     if (error) throw error
 
