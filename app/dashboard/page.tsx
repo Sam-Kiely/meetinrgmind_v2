@@ -8,6 +8,7 @@ import { useAuth } from '@/lib/auth'
 import { EmailSection } from '@/components/EmailSection'
 import ParticipantBank from '@/components/ParticipantBank'
 import ResultsDisplay from '@/components/ResultsDisplay'
+import ActionItemsView from '@/components/ActionItemsView'
 import { supabase } from '@/lib/supabase'
 
 interface SavedMeeting {
@@ -31,6 +32,7 @@ function DashboardContent() {
   const [selectedMeeting, setSelectedMeeting] = useState<SavedMeeting | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
+  const [showActionItems, setShowActionItems] = useState<'outstanding' | 'completed' | null>(null)
   const { user } = useAuth()
   const searchParams = useSearchParams()
 
@@ -89,7 +91,7 @@ function DashboardContent() {
 
   const updateActionItem = async (actionItemId: string, completed: boolean) => {
     try {
-      // Update local state
+      // Update local state immediately for responsiveness
       if (selectedMeeting) {
         const updatedActionItems = selectedMeeting.action_items.map(item =>
           item.id === actionItemId ? { ...item, completed } : item
@@ -109,6 +111,9 @@ function DashboardContent() {
         })
         setMeetings(updatedMeetings)
 
+        // TODO: Persist to database - currently has type issues with JSONB field
+        // The update is reflected in the UI state
+
         // Note: In production, this would sync with the database
       }
 
@@ -122,7 +127,7 @@ function DashboardContent() {
     if (!confirm('Are you sure you want to delete this action item?')) return
 
     try {
-      // Update local state
+      // Update local state immediately
       if (selectedMeeting) {
         const updatedActionItems = selectedMeeting.action_items.filter(item => item.id !== actionItemId)
         const updatedMeeting = {
@@ -139,6 +144,9 @@ function DashboardContent() {
           return meeting
         })
         setMeetings(updatedMeetings)
+
+        // TODO: Persist to database - currently has type issues with JSONB field
+        // The update is reflected in the UI state
 
         // Note: In production, this would sync with the database
       }
@@ -267,7 +275,20 @@ function DashboardContent() {
   const getActionItemsStats = (meeting: SavedMeeting) => {
     const total = meeting.action_items?.length || 0
     const completed = meeting.action_items?.filter(item => item.completed).length || 0
-    return { total, completed }
+    const outstanding = total - completed
+    return { total, completed, outstanding }
+  }
+
+  const getAllActionItemsStats = () => {
+    const stats = meetings.reduce((acc, meeting) => {
+      const meetingStats = getActionItemsStats(meeting)
+      return {
+        total: acc.total + meetingStats.total,
+        completed: acc.completed + meetingStats.completed,
+        outstanding: acc.outstanding + meetingStats.outstanding
+      }
+    }, { total: 0, completed: 0, outstanding: 0 })
+    return stats
   }
 
   if (isLoading) {
@@ -342,38 +363,58 @@ function DashboardContent() {
               </div>
             </div>
 
-            <div className="bg-white rounded-xl shadow-lg p-6">
+            <button
+              onClick={() => setShowActionItems('outstanding')}
+              className="bg-white rounded-xl shadow-lg p-6 text-left hover:shadow-xl transition-shadow cursor-pointer group w-full"
+            >
+              <div className="flex items-center">
+                <div className="p-3 bg-amber-500 rounded-lg">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div className="ml-4 flex-1">
+                  <p className="text-2xl font-bold text-gray-900">
+                    {getAllActionItemsStats().outstanding}
+                  </p>
+                  <p className="text-gray-600">Outstanding Action Items</p>
+                </div>
+                <svg className="w-5 h-5 text-gray-400 group-hover:text-gray-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
+            </button>
+
+            <button
+              onClick={() => setShowActionItems('completed')}
+              className="bg-white rounded-xl shadow-lg p-6 text-left hover:shadow-xl transition-shadow cursor-pointer group w-full"
+            >
               <div className="flex items-center">
                 <div className="p-3 bg-green-500 rounded-lg">
                   <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
-                <div className="ml-4">
+                <div className="ml-4 flex-1">
                   <p className="text-2xl font-bold text-gray-900">
-                    {meetings.reduce((sum, meeting) => sum + getActionItemsStats(meeting).total, 0)}
-                  </p>
-                  <p className="text-gray-600">Total Action Items</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <div className="flex items-center">
-                <div className="p-3 bg-blue-500 rounded-lg">
-                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <div className="ml-4">
-                  <p className="text-2xl font-bold text-gray-900">
-                    {meetings.reduce((sum, meeting) => sum + getActionItemsStats(meeting).completed, 0)}
+                    {getAllActionItemsStats().completed}
                   </p>
                   <p className="text-gray-600">Completed Tasks</p>
                 </div>
+                <svg className="w-5 h-5 text-gray-400 group-hover:text-gray-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
               </div>
-            </div>
+            </button>
           </div>
+
+          {/* Action Items Modal */}
+          {showActionItems && (
+            <ActionItemsView
+              view={showActionItems}
+              onClose={() => setShowActionItems(null)}
+            />
+          )}
 
           {/* Participant Bank */}
           <ParticipantBank />
