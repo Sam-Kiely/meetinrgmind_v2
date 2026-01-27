@@ -27,33 +27,38 @@ export default function ResultsDisplay({ analysis }: ResultsDisplayProps) {
   const [similarParticipants, setSimilarParticipants] = useState<SimilarParticipant[]>([])
   const [contactsInBank, setContactsInBank] = useState<Set<string>>(new Set())
 
-  useEffect(() => {
-    // Load existing contacts to check which participants are already in the bank
-    const loadExistingContacts = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession()
+  // Load existing contacts to check which participants are already in the bank
+  const loadExistingContacts = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
 
-        if (!session) return
+      if (!session) return
 
-        const response = await fetch('/api/participants/contacts', {
-          headers: {
-            'Authorization': `Bearer ${session.access_token}`
-          }
-        })
-
-        if (response.ok) {
-          const data = await response.json()
-          const existingNames = new Set<string>(
-            data.contacts?.map((contact: any) => contact.name as string) || []
-          )
-          setContactsInBank(existingNames)
+      const response = await fetch('/api/participants/contacts', {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`
         }
-      } catch (error) {
-        console.error('Error loading existing contacts:', error)
-      }
-    }
+      })
 
+      if (response.ok) {
+        const data = await response.json()
+        const existingNames = new Set<string>(
+          data.contacts?.map((contact: any) => contact.name as string) || []
+        )
+        setContactsInBank(existingNames)
+      }
+    } catch (error) {
+      console.error('Error loading existing contacts:', error)
+    }
+  }
+
+  useEffect(() => {
     loadExistingContacts()
+
+    // Listen for participant bank updates
+    const handleContactsUpdate = () => loadExistingContacts()
+    window.addEventListener('participantBankRefresh', handleContactsUpdate)
+    return () => window.removeEventListener('participantBankRefresh', handleContactsUpdate)
   }, [])
 
   const handleParticipantUpdate = async (updatedParticipant: Participant) => {
@@ -103,6 +108,8 @@ export default function ResultsDisplay({ analysis }: ResultsDisplayProps) {
         } else {
           // No similar participants, contact added successfully
           setContactsInBank(prev => new Set([...prev, participant.name]))
+          // Refresh the participant bank
+          window.dispatchEvent(new Event('participantBankRefresh'))
           return true
         }
       }
@@ -141,6 +148,8 @@ export default function ResultsDisplay({ analysis }: ResultsDisplayProps) {
         setContactsInBank(prev => new Set([...prev, currentParticipantToAdd.name]))
         setCurrentParticipantToAdd(null)
         setSimilarParticipants([])
+        // Refresh the participant bank
+        window.dispatchEvent(new Event('participantBankRefresh'))
       }
     } catch (error) {
       console.error('Error merging contact:', error)
@@ -168,6 +177,8 @@ export default function ResultsDisplay({ analysis }: ResultsDisplayProps) {
         setContactsInBank(prev => new Set([...prev, currentParticipantToAdd.name]))
         setCurrentParticipantToAdd(null)
         setSimilarParticipants([])
+        // Refresh the participant bank
+        window.dispatchEvent(new Event('participantBankRefresh'))
       }
     } catch (error) {
       console.error('Error creating new contact:', error)

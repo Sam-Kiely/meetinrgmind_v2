@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
 interface Meeting {
@@ -28,9 +29,23 @@ export default function ParticipantBank() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editedContact, setEditedContact] = useState<ParticipantContact | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const router = useRouter()
 
   useEffect(() => {
     fetchContacts()
+  }, [])
+
+  // Add a method to refresh contacts (can be called externally)
+  const refreshContacts = () => {
+    fetchContacts()
+  }
+
+  // Expose refresh method to parent components
+  useEffect(() => {
+    // Listen for custom events to refresh contacts
+    const handleRefresh = () => refreshContacts()
+    window.addEventListener('participantBankRefresh', handleRefresh)
+    return () => window.removeEventListener('participantBankRefresh', handleRefresh)
   }, [])
 
   const fetchContacts = async () => {
@@ -292,7 +307,7 @@ export default function ParticipantBank() {
                             </p>
                           </div>
                           <button
-                            onClick={() => window.location.href = `/dashboard?meeting=${meeting.id}`}
+                            onClick={() => router.push(`/dashboard?meeting=${meeting.id}`)}
                             className="ml-3 text-sm text-indigo-600 hover:text-indigo-900"
                           >
                             View →

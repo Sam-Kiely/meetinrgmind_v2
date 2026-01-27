@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { MeetingAnalysis } from '@/types'
 import { useAuth } from '@/lib/auth'
 import { EmailSection } from '@/components/EmailSection'
@@ -31,6 +32,7 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
   const { user } = useAuth()
+  const searchParams = useSearchParams()
 
   useEffect(() => {
     if (user?.id) {
@@ -39,6 +41,17 @@ export default function DashboardPage() {
       setIsLoading(false)
     }
   }, [user?.id])
+
+  // Handle URL parameter for direct meeting navigation
+  useEffect(() => {
+    const meetingIdFromUrl = searchParams.get('meeting')
+    if (meetingIdFromUrl && meetings.length > 0) {
+      const meeting = meetings.find(m => m.id === meetingIdFromUrl)
+      if (meeting) {
+        setSelectedMeeting(meeting)
+      }
+    }
+  }, [searchParams, meetings])
 
   const fetchMeetings = async () => {
     if (!user?.id) {
@@ -173,6 +186,9 @@ export default function DashboardPage() {
         alert(`Meeting deleted. ${data.orphanedParticipants.length} participants ${action} from your contact bank.`)
       }
 
+      // Trigger participant bank refresh
+      window.dispatchEvent(new Event('participantBankRefresh'))
+
       return data
     } catch (err) {
       console.error('Error deleting meeting:', err)
@@ -223,6 +239,9 @@ export default function DashboardPage() {
           if (selectedMeeting?.id === meetingId) {
             setSelectedMeeting(null)
           }
+
+          // Trigger participant bank refresh
+          window.dispatchEvent(new Event('participantBankRefresh'))
         }
       } else {
         const errorData = await response.json()
