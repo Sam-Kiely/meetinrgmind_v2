@@ -2,21 +2,26 @@
 
 import { useState } from 'react'
 import { Participant } from '@/types'
+import { createClient } from '@supabase/supabase-js'
 
 interface ParticipantCardProps {
   participant: Participant
   onUpdate?: (updatedParticipant: Participant) => void
   onAddToContacts?: (participant: Participant) => void
+  isInContacts?: boolean
 }
 
 export default function ParticipantCard({
   participant,
   onUpdate,
-  onAddToContacts
+  onAddToContacts,
+  isInContacts = false
 }: ParticipantCardProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [editedParticipant, setEditedParticipant] = useState(participant)
   const [isSaving, setIsSaving] = useState(false)
+  const [addedToContacts, setAddedToContacts] = useState(isInContacts)
+  const [isAdding, setIsAdding] = useState(false)
 
   const handleSave = async () => {
     setIsSaving(true)
@@ -157,17 +162,38 @@ export default function ParticipantCard({
                 </svg>
               </button>
 
-              {onAddToContacts && (
+              {onAddToContacts && !addedToContacts && (
                 <button
-                  onClick={() => onAddToContacts(participant)}
-                  className="p-1 text-gray-400 hover:text-green-600"
+                  onClick={async () => {
+                    setIsAdding(true)
+                    await onAddToContacts(participant)
+                    setAddedToContacts(true)
+                    setIsAdding(false)
+                  }}
+                  className="p-1 text-gray-400 hover:text-green-600 transition-colors"
                   title="Add to contacts"
+                  disabled={isAdding}
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                      d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-                  </svg>
+                  {isAdding ? (
+                    <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                  ) : (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                        d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                    </svg>
+                  )}
                 </button>
+              )}
+
+              {addedToContacts && (
+                <div className="p-1 text-green-600" title="In contacts">
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                </div>
               )}
             </div>
           </div>

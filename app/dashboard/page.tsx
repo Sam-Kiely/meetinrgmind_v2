@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { MeetingAnalysis } from '@/types'
 import { useAuth } from '@/lib/auth'
 import { EmailSection } from '@/components/EmailSection'
+import ParticipantBank from '@/components/ParticipantBank'
+import ResultsDisplay from '@/components/ResultsDisplay'
 
 interface SavedMeeting {
   id: string
@@ -229,6 +231,9 @@ export default function DashboardPage() {
             </div>
           </div>
 
+          {/* Participant Bank */}
+          <ParticipantBank />
+
           <div className="bg-white rounded-xl shadow-lg">
             <div className="px-6 py-4 border-b border-gray-200">
               <h2 className="text-xl font-semibold text-gray-900">Recent Meetings</h2>
@@ -312,40 +317,10 @@ export default function DashboardPage() {
               {new Date(selectedMeeting.meeting_date).toLocaleDateString()} •{' '}
               {selectedMeeting.results.participants?.length || 0} participants
             </p>
-            <p className="text-gray-700 leading-relaxed">{selectedMeeting.results.summary}</p>
           </div>
 
-          {/* Participants */}
-          {selectedMeeting.results.participants?.length > 0 && (
-            <div className="bg-white rounded-xl shadow-lg p-8">
-              <h3 className="text-2xl font-bold text-gray-900 mb-6">👥 Meeting Participants</h3>
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {selectedMeeting.results.participants.map((participant, index) => (
-                  <div key={index} className="border border-gray-200 rounded-lg p-4">
-                    <div className="flex items-start">
-                      <div className="flex-shrink-0 w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
-                        <span className="text-gray-600 font-medium text-sm">
-                          {participant.name.split(' ').map(n => n[0]).join('').toUpperCase()}
-                        </span>
-                      </div>
-                      <div className="ml-3 flex-1">
-                        <h4 className="font-semibold text-gray-900">{participant.name}</h4>
-                        {participant.title && (
-                          <p className="text-sm text-gray-600">{participant.title}</p>
-                        )}
-                        {participant.role && (
-                          <p className="text-xs text-gray-500">{participant.role}</p>
-                        )}
-                        {participant.company && (
-                          <p className="text-xs text-blue-600">{participant.company}</p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          {/* Use ResultsDisplay for full editable functionality */}
+          <ResultsDisplay analysis={selectedMeeting.results} />
 
           {/* Action Items with Management */}
           <div className="bg-white rounded-xl shadow-lg p-8">

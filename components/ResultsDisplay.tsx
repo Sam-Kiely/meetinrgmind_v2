@@ -5,6 +5,7 @@ import { MeetingAnalysis, Participant } from '@/types'
 import ActionItemCard from './ActionItemCard'
 import { EmailSection } from './EmailSection'
 import ParticipantCard from './ParticipantCard'
+import { createClient } from '@supabase/supabase-js'
 
 interface ResultsDisplayProps {
   analysis: MeetingAnalysis
@@ -33,19 +34,36 @@ export default function ResultsDisplay({ analysis }: ResultsDisplayProps) {
 
   const handleAddToContacts = async (participant: Participant) => {
     try {
+      // Get the current session token
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      )
+
+      const { data: { session } } = await supabase.auth.getSession()
+
+      if (!session) {
+        console.error('No session found')
+        return
+      }
+
       const response = await fetch('/api/participants/contacts', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
         body: JSON.stringify(participant)
       })
 
       if (response.ok) {
-        // Show success toast or notification
-        console.log('Added to contacts')
+        // Success - the ParticipantCard will show the checkmark
+        return true
       }
     } catch (error) {
       console.error('Error adding to contacts:', error)
     }
+    return false
   }
 
   const handleRefreshEmails = async () => {
