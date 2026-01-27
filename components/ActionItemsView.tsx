@@ -57,7 +57,7 @@ export default function ActionItemsView({ view, onClose }: ActionItemsViewProps)
         // If action_items is null/empty, try results.actionItems
         if ((!items || items.length === 0) && meeting.results?.actionItems) {
           items = meeting.results.actionItems.map((item: any, index: number) => ({
-            id: item.id || `${meeting.id}-${index}`,
+            id: item.id || `${meeting.id}-ai-${index}-${item.task?.slice(0, 5)}`,
             task: item.task,
             owner: item.owner,
             deadline: item.deadline,
@@ -69,10 +69,10 @@ export default function ActionItemsView({ view, onClose }: ActionItemsViewProps)
         console.log(`Meeting ${meeting.title} action items:`, items) // Debug log
 
         if (Array.isArray(items) && items.length > 0) {
-          items.forEach((item: any) => {
-            // Ensure item has required fields
+          items.forEach((item: any, itemIndex: number) => {
+            // Ensure item has required fields and unique ID
             const actionItem = {
-              id: item.id || Math.random().toString(36),
+              id: item.id || `${meeting.id}-item-${itemIndex}-${Date.now()}`,
               task: item.task || '',
               owner: item.owner || '',
               deadline: item.deadline || '',
@@ -113,10 +113,10 @@ export default function ActionItemsView({ view, onClose }: ActionItemsViewProps)
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) return
 
-      // Get the current meeting's action items
+      // Get the current meeting with both action_items and results
       const { data: meeting, error: fetchError } = await supabase
         .from('meetings')
-        .select('action_items')
+        .select('id, action_items, results')
         .eq('id', item.meeting_id)
         .single()
 
@@ -125,10 +125,31 @@ export default function ActionItemsView({ view, onClose }: ActionItemsViewProps)
         return
       }
 
-      // Update the specific action item
-      const updatedItems = ((meeting as any).action_items as any[] || []).map(ai =>
-        ai.id === item.id ? { ...ai, completed: !item.completed } : ai
-      )
+      // Get action items from either source
+      let currentItems = (meeting as any).action_items
+
+      // If action_items is null/empty, check results.actionItems
+      if (!currentItems || (Array.isArray(currentItems) && currentItems.length === 0)) {
+        currentItems = (meeting as any).results?.actionItems || []
+      }
+
+      // Ensure we have an array
+      if (!Array.isArray(currentItems)) {
+        console.error('No action items found in meeting')
+        return
+      }
+
+      // Update the specific action item - toggle its current state
+      const updatedItems = currentItems.map((ai: any) => {
+        // Match by id or by task+owner if id is missing
+        const isMatch = ai.id === item.id ||
+                       (ai.task === item.task && ai.owner === item.owner)
+
+        if (isMatch) {
+          return { ...ai, completed: !item.completed }
+        }
+        return ai
+      })
 
       // Save using the API endpoint
       const response = await fetch(`/api/meetings/${item.meeting_id}/action-items`, {

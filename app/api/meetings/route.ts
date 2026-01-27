@@ -30,8 +30,10 @@ export async function POST(request: NextRequest) {
 
     // Try to add action_items column if it exists
     // This will work after migration is run
+    // Generate unique IDs for each action item
+    const timestamp = Date.now()
     const processedActionItems = analysis.actionItems?.map((item: any, index: number) => ({
-      id: item.id || `ai-${Date.now()}-${index}`,
+      id: item.id || `${userId.slice(0, 8)}-${timestamp}-${index}`,
       task: item.task,
       owner: item.owner,
       deadline: item.deadline,
