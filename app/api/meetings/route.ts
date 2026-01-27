@@ -19,7 +19,17 @@ export async function POST(request: NextRequest) {
     // Generate a title from the analysis if none provided
     const meetingTitle = title || generateMeetingTitle(analysis)
 
-    // Save meeting to database
+    // Process action items to ensure they have proper structure
+    const processedActionItems = analysis.actionItems?.map((item: any, index: number) => ({
+      id: item.id || `ai-${Date.now()}-${index}`,
+      task: item.task,
+      owner: item.owner,
+      deadline: item.deadline,
+      priority: item.priority || 'medium',
+      completed: item.completed || false
+    })) || []
+
+    // Save meeting to database with action_items field populated
     const { data: meeting, error: meetingError } = await (supabaseAdmin as any)
       .from('meetings')
       .insert({
@@ -27,6 +37,7 @@ export async function POST(request: NextRequest) {
         title: meetingTitle,
         transcript,
         results: analysis,
+        action_items: processedActionItems,
         meeting_date: new Date().toISOString(),
       })
       .select()
@@ -40,26 +51,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Save action items separately for better management
-    if (analysis.actionItems?.length > 0) {
-      const actionItemsData = analysis.actionItems.map((item: any) => ({
-        meeting_id: meeting.id,
-        task: item.task,
-        owner: item.owner,
-        deadline: item.deadline,
-        priority: item.priority || 'medium',
-        completed: item.completed || false,
-      }))
-
-      const { error: actionItemsError } = await (supabaseAdmin as any)
-        .from('action_items')
-        .insert(actionItemsData)
-
-      if (actionItemsError) {
-        console.error('Error saving action items:', actionItemsError)
-        // Don't fail the request, but log the error
-      }
-    }
+    // Note: Action items are now stored in the meetings table directly
+    // in the action_items JSONB field, not in a separate table
 
     return NextResponse.json({
       success: true,
@@ -102,22 +95,24 @@ export async function GET(request: NextRequest) {
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
 
-    if (!error && meetings) {
-      // Process each meeting to ensure action_items are available
+    // Process meetings to ensure action_items field is properly populated
+    if (meetings) {
       meetings.forEach((meeting: any) => {
-        // If action_items field is not populated, extract from results
-        if (!meeting.action_items && meeting.results?.actionItems) {
-          meeting.action_items = meeting.results.actionItems.map((item: any, index: number) => ({
-            id: item.id || `${meeting.id}-${index}`,
-            task: item.task,
-            owner: item.owner,
-            deadline: item.deadline,
-            priority: item.priority || 'medium',
-            completed: item.completed || false
-          }))
+        // If action_items field is not populated, extract from results.actionItems
+        if (!meeting.action_items || (Array.isArray(meeting.action_items) && meeting.action_items.length === 0)) {
+          if (meeting.results?.actionItems && Array.isArray(meeting.results.actionItems)) {
+            meeting.action_items = meeting.results.actionItems.map((item: any, index: number) => ({
+              id: item.id || `${meeting.id}-${index}`,
+              task: item.task,
+              owner: item.owner,
+              deadline: item.deadline,
+              priority: item.priority || 'medium',
+              completed: item.completed || false
+            }))
+          }
         }
         // Ensure action_items is always an array
-        if (!meeting.action_items) {
+        if (!Array.isArray(meeting.action_items)) {
           meeting.action_items = []
         }
       })
