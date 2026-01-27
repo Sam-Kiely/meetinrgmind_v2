@@ -128,6 +128,86 @@ export default function DashboardPage() {
     }
   }
 
+  const deleteMeeting = async (meetingId: string, retainParticipants: boolean = false) => {
+    try {
+      const response = await fetch(`/api/meetings/${meetingId}/delete`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ retainParticipants })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to delete meeting')
+      }
+
+      const data = await response.json()
+
+      // Remove meeting from local state
+      const updatedMeetings = meetings.filter(m => m.id !== meetingId)
+      setMeetings(updatedMeetings)
+
+      // If we were viewing this meeting, go back to dashboard
+      if (selectedMeeting?.id === meetingId) {
+        setSelectedMeeting(null)
+      }
+
+      // Show success message
+      if (data.orphanedParticipants?.length > 0) {
+        const action = retainParticipants ? 'retained' : 'removed'
+        alert(`Meeting deleted. ${data.orphanedParticipants.length} participants ${action} from your contact bank.`)
+      }
+
+      return data
+    } catch (err) {
+      console.error('Error deleting meeting:', err)
+      setError('Failed to delete meeting')
+      throw err
+    }
+  }
+
+  const handleDeleteMeeting = async (meetingId: string) => {
+    const confirmDelete = confirm('Are you sure you want to delete this meeting? This action cannot be undone.')
+    if (!confirmDelete) return
+
+    // First, check for orphaned participants
+    try {
+      const response = await fetch(`/api/meetings/${meetingId}/delete`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ retainParticipants: false })
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+
+        // If there are orphaned participants, ask user what to do
+        if (data.orphanedParticipants?.length > 0) {
+          const retain = confirm(
+            `This meeting has ${data.orphanedParticipants.length} participant(s) (${data.orphanedParticipants.join(', ')}) that won't appear in any other meetings.\n\nWould you like to keep them in your contact bank? (Click Cancel to remove them)`
+          )
+
+          // Delete again with the user's preference
+          await deleteMeeting(meetingId, retain)
+        } else {
+          // No orphaned participants, just update UI
+          const updatedMeetings = meetings.filter(m => m.id !== meetingId)
+          setMeetings(updatedMeetings)
+
+          if (selectedMeeting?.id === meetingId) {
+            setSelectedMeeting(null)
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Error deleting meeting:', err)
+      setError('Failed to delete meeting')
+    }
+  }
+
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'high': return 'text-red-600 bg-red-50'
@@ -255,11 +335,13 @@ export default function DashboardPage() {
                   return (
                     <div
                       key={meeting.id}
-                      className="px-6 py-4 hover:bg-gray-50 cursor-pointer"
-                      onClick={() => handleMeetingClick(meeting.id)}
+                      className="px-6 py-4 hover:bg-gray-50 group"
                     >
                       <div className="flex items-center justify-between">
-                        <div className="flex-1">
+                        <div
+                          className="flex-1 cursor-pointer"
+                          onClick={() => handleMeetingClick(meeting.id)}
+                        >
                           <h3 className="text-lg font-medium text-gray-900">{meeting.title}</h3>
                           <p className="text-sm text-gray-600 mb-1">
                             {new Date(meeting.meeting_date).toLocaleDateString()} •{' '}
@@ -272,9 +354,26 @@ export default function DashboardPage() {
                         </div>
                         <div className="flex items-center space-x-4 text-sm text-gray-500 ml-4">
                           <span className="whitespace-nowrap">{stats.completed}/{stats.total} completed</span>
-                          <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                          </svg>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleDeleteMeeting(meeting.id)
+                            }}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-gray-400 hover:text-red-600"
+                            title="Delete meeting"
+                          >
+                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                            </svg>
+                          </button>
+                          <div
+                            className="cursor-pointer"
+                            onClick={() => handleMeetingClick(meeting.id)}
+                          >
+                            <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -302,12 +401,20 @@ export default function DashboardPage() {
             </svg>
             Back to Dashboard
           </button>
-          <Link
-            href="/"
-            className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
-          >
-            New Meeting
-          </Link>
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={() => handleDeleteMeeting(selectedMeeting.id)}
+              className="px-4 py-2 text-red-600 border border-red-300 rounded-lg hover:bg-red-50 transition-colors"
+            >
+              Delete Meeting
+            </button>
+            <Link
+              href="/"
+              className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
+            >
+              New Meeting
+            </Link>
+          </div>
         </div>
 
         <div className="space-y-8">
