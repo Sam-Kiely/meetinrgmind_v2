@@ -12,11 +12,7 @@ export default function HowItWorksPage() {
         'Works with all meeting platforms',
         'Process meetings retroactively'
       ],
-      icon: (
-        <svg className="w-16 h-16 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
-        </svg>
-      )
+      image: '📝'
     },
     {
       number: '2',
@@ -31,11 +27,7 @@ export default function HowItWorksPage() {
         'Important dates and milestones',
         'Priority classification'
       ],
-      icon: (
-        <svg className="w-16 h-16 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      )
+      image: '🤖'
     },
     {
       number: '3',
@@ -50,48 +42,28 @@ export default function HowItWorksPage() {
         'Export to various formats',
         'One-click email copying'
       ],
-      icon: (
-        <svg className="w-16 h-16 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-        </svg>
-      )
+      image: '📧'
     }
   ]
 
   const benefits = [
     {
-      icon: (
-        <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-        </svg>
-      ),
+      icon: '⚡',
       title: 'Save 30+ Minutes Per Meeting',
       description: 'Eliminate manual note-taking and follow-up drafting. Get comprehensive results in under 60 seconds.'
     },
     {
-      icon: (
-        <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      ),
+      icon: '🎯',
       title: 'Never Miss Action Items',
       description: 'AI-powered analysis ensures every task, decision, and deadline is captured and properly assigned.'
     },
     {
-      icon: (
-        <svg className="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-        </svg>
-      ),
+      icon: '📈',
       title: 'Improve Team Accountability',
       description: 'Clear action items with owners and deadlines keep everyone aligned and productive.'
     },
     {
-      icon: (
-        <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-        </svg>
-      ),
+      icon: '🔒',
       title: 'Enterprise Security',
       description: 'Your meeting data is processed securely with automatic cleanup and enterprise-grade privacy protection.'
     }
@@ -156,7 +128,7 @@ export default function HowItWorksPage() {
 
               <div className="flex-1">
                 <div className="bg-white rounded-xl shadow-lg p-8 text-center">
-                  <div className="mb-6 flex justify-center">{step.icon}</div>
+                  <div className="text-8xl mb-4">{step.image}</div>
                   <div className="bg-gray-50 rounded-lg p-6">
                     <h3 className="font-semibold text-gray-900 mb-2">Step {step.number}</h3>
                     <p className="text-sm text-gray-600">
@@ -216,7 +188,7 @@ export default function HowItWorksPage() {
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             {benefits.map((benefit, index) => (
               <div key={index} className="bg-white rounded-xl shadow-lg p-6 text-center">
-                <div className="mb-4 flex justify-center">{benefit.icon}</div>
+                <div className="text-4xl mb-4">{benefit.icon}</div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">{benefit.title}</h3>
                 <p className="text-gray-600 text-sm">{benefit.description}</p>
               </div>
