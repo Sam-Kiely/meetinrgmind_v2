@@ -1,11 +1,18 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { MeetingAnalysis, Participant } from '@/types'
 import ActionItemCard from './ActionItemCard'
 import { EmailSection } from './EmailSection'
 import ParticipantCard from './ParticipantCard'
+import MergeConfirmationModal from './MergeConfirmationModal'
 import { createClient } from '@supabase/supabase-js'
+
+interface SimilarParticipant {
+  contact_id: string
+  name: string
+  similarity_score: number
+}
 
 interface ResultsDisplayProps {
   analysis: MeetingAnalysis
@@ -15,6 +22,44 @@ export default function ResultsDisplay({ analysis }: ResultsDisplayProps) {
   const [participants, setParticipants] = useState(analysis.participants)
   const [showRefreshPrompt, setShowRefreshPrompt] = useState(false)
   const [refreshingEmails, setRefreshingEmails] = useState(false)
+  const [showMergeModal, setShowMergeModal] = useState(false)
+  const [currentParticipantToAdd, setCurrentParticipantToAdd] = useState<Participant | null>(null)
+  const [similarParticipants, setSimilarParticipants] = useState<SimilarParticipant[]>([])
+  const [contactsInBank, setContactsInBank] = useState<Set<string>>(new Set())
+
+  useEffect(() => {
+    // Load existing contacts to check which participants are already in the bank
+    const loadExistingContacts = async () => {
+      try {
+        const supabase = createClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+        )
+
+        const { data: { session } } = await supabase.auth.getSession()
+
+        if (!session) return
+
+        const response = await fetch('/api/participants/contacts', {
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`
+          }
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          const existingNames = new Set<string>(
+            data.contacts?.map((contact: any) => contact.name as string) || []
+          )
+          setContactsInBank(existingNames)
+        }
+      } catch (error) {
+        console.error('Error loading existing contacts:', error)
+      }
+    }
+
+    loadExistingContacts()
+  }, [])
 
   const handleParticipantUpdate = async (updatedParticipant: Participant) => {
     const index = participants.findIndex(p => p.name === analysis.participants.find(ap => ap.name === updatedParticipant.name)?.name)
@@ -44,7 +89,7 @@ export default function ResultsDisplay({ analysis }: ResultsDisplayProps) {
 
       if (!session) {
         console.error('No session found')
-        return
+        return false
       }
 
       const response = await fetch('/api/participants/contacts', {
@@ -53,17 +98,100 @@ export default function ResultsDisplay({ analysis }: ResultsDisplayProps) {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`
         },
-        body: JSON.stringify(participant)
+        body: JSON.stringify({ participant, checkForSimilar: true })
       })
 
       if (response.ok) {
-        // Success - the ParticipantCard will show the checkmark
-        return true
+        const data = await response.json()
+
+        // Check if similar participants were found
+        if (data.requiresConfirmation && data.similarParticipants) {
+          setCurrentParticipantToAdd(participant)
+          setSimilarParticipants(data.similarParticipants)
+          setShowMergeModal(true)
+          return false // Don't show success state yet
+        } else {
+          // No similar participants, contact added successfully
+          setContactsInBank(prev => new Set([...prev, participant.name]))
+          return true
+        }
       }
     } catch (error) {
       console.error('Error adding to contacts:', error)
     }
     return false
+  }
+
+  const handleMerge = async (selectedContactId: string) => {
+    if (!currentParticipantToAdd) return
+
+    try {
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      )
+
+      const { data: { session } } = await supabase.auth.getSession()
+
+      if (!session) return
+
+      // Update the selected contact with new participant info
+      const response = await fetch('/api/participants/contacts', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          id: selectedContactId,
+          name: currentParticipantToAdd.name,
+          title: currentParticipantToAdd.title,
+          role: currentParticipantToAdd.role,
+          company: currentParticipantToAdd.company,
+          email: currentParticipantToAdd.email
+        })
+      })
+
+      if (response.ok) {
+        setContactsInBank(prev => new Set([...prev, currentParticipantToAdd.name]))
+        setCurrentParticipantToAdd(null)
+        setSimilarParticipants([])
+      }
+    } catch (error) {
+      console.error('Error merging contact:', error)
+    }
+  }
+
+  const handleCreateNew = async () => {
+    if (!currentParticipantToAdd) return
+
+    try {
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      )
+
+      const { data: { session } } = await supabase.auth.getSession()
+
+      if (!session) return
+
+      const response = await fetch('/api/participants/contacts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ participant: currentParticipantToAdd, checkForSimilar: false })
+      })
+
+      if (response.ok) {
+        setContactsInBank(prev => new Set([...prev, currentParticipantToAdd.name]))
+        setCurrentParticipantToAdd(null)
+        setSimilarParticipants([])
+      }
+    } catch (error) {
+      console.error('Error creating new contact:', error)
+    }
   }
 
   const handleRefreshEmails = async () => {
@@ -143,6 +271,7 @@ export default function ResultsDisplay({ analysis }: ResultsDisplayProps) {
               participant={participant}
               onUpdate={handleParticipantUpdate}
               onAddToContacts={handleAddToContacts}
+              isInContacts={contactsInBank.has(participant.name)}
             />
           ))}
         </div>
@@ -190,6 +319,21 @@ export default function ResultsDisplay({ analysis }: ResultsDisplayProps) {
       <div className="bg-white rounded-xl shadow-lg p-8">
         <EmailSection emails={analysis.followUpEmails || []} />
       </div>
+
+      <MergeConfirmationModal
+        isOpen={showMergeModal}
+        onClose={() => setShowMergeModal(false)}
+        newParticipant={currentParticipantToAdd || {
+          name: '',
+          title: '',
+          role: '',
+          company: '',
+          email: ''
+        }}
+        similarParticipants={similarParticipants}
+        onMerge={handleMerge}
+        onCreateNew={handleCreateNew}
+      />
     </div>
   )
 }

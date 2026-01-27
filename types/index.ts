@@ -21,6 +21,7 @@ export interface MeetingParticipant {
   title?: string
   role?: string
   company?: string
+  email?: string
 }
 
 // Alias for component usage

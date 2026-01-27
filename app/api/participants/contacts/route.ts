@@ -26,11 +26,10 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Get user's frequent participants
+    // Get participants with their meeting history
     const { data: contacts, error } = await (supabaseAdmin as any)
-      .rpc('get_frequent_participants', {
-        p_user_id: user.id,
-        p_limit: 20
+      .rpc('get_participants_with_meetings', {
+        p_user_id: user.id
       })
 
     if (error) {
@@ -75,7 +74,30 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const participant = await request.json()
+    const { participant, checkForSimilar = true } = await request.json()
+
+    // Check for similar participants first
+    let similarParticipants = []
+    if (checkForSimilar) {
+      const { data: similar } = await (supabaseAdmin as any)
+        .rpc('find_similar_participants', {
+          p_user_id: user.id,
+          p_name: participant.name
+        })
+
+      if (similar && similar.length > 0) {
+        similarParticipants = similar
+      }
+    }
+
+    // If similar participants found, return them for user confirmation
+    if (similarParticipants.length > 0 && checkForSimilar) {
+      return NextResponse.json({
+        requiresConfirmation: true,
+        similarParticipants,
+        message: `Found similar participants. Would you like to merge with an existing contact?`
+      })
+    }
 
     // Upsert participant contact
     const { data: contact, error } = await (supabaseAdmin as any)
@@ -96,9 +118,18 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Retroactively associate with past meetings
+    const { data: meetingCount } = await (supabaseAdmin as any)
+      .rpc('associate_participant_with_past_meetings', {
+        p_user_id: user.id,
+        p_participant_name: participant.name,
+        p_participant_contact_id: contact.id
+      })
+
     return NextResponse.json({
       success: true,
-      contact
+      contact,
+      associatedMeetings: meetingCount || 0
     })
 
   } catch (error) {

@@ -3,15 +3,23 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@supabase/supabase-js'
 
-interface ParticipantContact {
+interface Meeting {
   id: string
+  title: string
+  date: string
+  summary: string
+}
+
+interface ParticipantContact {
+  contact_id: string
   name: string
   title?: string
   role?: string
   company?: string
   email?: string
-  usage_count: number
-  last_used_at: string
+  manually_retained: boolean
+  meeting_count: number
+  meetings: Meeting[]
 }
 
 export default function ParticipantBank() {
@@ -19,6 +27,7 @@ export default function ParticipantBank() {
   const [loading, setLoading] = useState(true)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editedContact, setEditedContact] = useState<ParticipantContact | null>(null)
+  const [expandedId, setExpandedId] = useState<string | null>(null)
 
   useEffect(() => {
     fetchContacts()
@@ -56,7 +65,7 @@ export default function ParticipantBank() {
   }
 
   const handleEdit = (contact: ParticipantContact) => {
-    setEditingId(contact.id)
+    setEditingId(contact.contact_id)
     setEditedContact({ ...contact })
   }
 
@@ -79,7 +88,14 @@ export default function ParticipantBank() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`
         },
-        body: JSON.stringify(editedContact)
+        body: JSON.stringify({
+          id: editedContact.contact_id,
+          name: editedContact.name,
+          title: editedContact.title,
+          role: editedContact.role,
+          company: editedContact.company,
+          email: editedContact.email
+        })
       })
 
       if (response.ok) {
@@ -93,7 +109,7 @@ export default function ParticipantBank() {
   }
 
   const handleDelete = async (contactId: string) => {
-    if (!confirm('Are you sure you want to remove this contact?')) return
+    if (!confirm('Are you sure you want to remove this contact from your bank?')) return
 
     try {
       const supabase = createClient(
@@ -118,6 +134,10 @@ export default function ParticipantBank() {
     } catch (error) {
       console.error('Error deleting contact:', error)
     }
+  }
+
+  const toggleExpanded = (contactId: string) => {
+    setExpandedId(expandedId === contactId ? null : contactId)
   }
 
   if (loading) {
@@ -150,62 +170,95 @@ export default function ParticipantBank() {
           <p className="text-sm">Start adding participants from your meetings to build your contact bank.</p>
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead>
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Company</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usage</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {contacts.map((contact) => (
-                <tr key={contact.id}>
-                  {editingId === contact.id ? (
-                    <>
-                      <td className="px-4 py-3">
+        <div className="space-y-4">
+          {contacts.map((contact) => (
+            <div key={contact.contact_id} className="border border-gray-200 rounded-lg">
+              <div className="p-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    {editingId === contact.contact_id ? (
+                      <div className="grid grid-cols-4 gap-3">
                         <input
                           type="text"
                           value={editedContact?.name || ''}
                           onChange={(e) => setEditedContact({ ...editedContact!, name: e.target.value })}
-                          className="w-full px-2 py-1 text-sm border rounded"
+                          className="px-2 py-1 text-sm border rounded"
+                          placeholder="Name"
                         />
-                      </td>
-                      <td className="px-4 py-3">
                         <input
                           type="text"
                           value={editedContact?.title || ''}
                           onChange={(e) => setEditedContact({ ...editedContact!, title: e.target.value })}
-                          className="w-full px-2 py-1 text-sm border rounded"
+                          className="px-2 py-1 text-sm border rounded"
+                          placeholder="Title"
                         />
-                      </td>
-                      <td className="px-4 py-3">
                         <input
                           type="text"
                           value={editedContact?.company || ''}
                           onChange={(e) => setEditedContact({ ...editedContact!, company: e.target.value })}
-                          className="w-full px-2 py-1 text-sm border rounded"
+                          className="px-2 py-1 text-sm border rounded"
+                          placeholder="Company"
                         />
-                      </td>
-                      <td className="px-4 py-3">
                         <input
                           type="text"
                           value={editedContact?.role || ''}
                           onChange={(e) => setEditedContact({ ...editedContact!, role: e.target.value })}
-                          className="w-full px-2 py-1 text-sm border rounded"
+                          className="px-2 py-1 text-sm border rounded"
+                          placeholder="Role"
                         />
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-500">
-                        {contact.usage_count}x
-                      </td>
-                      <td className="px-4 py-3">
+                      </div>
+                    ) : (
+                      <div className="flex items-start">
+                        <div>
+                          <div className="flex items-center space-x-3">
+                            <h3 className="font-semibold text-gray-900">{contact.name}</h3>
+                            {contact.manually_retained && (
+                              <span className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded">
+                                Manually retained
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center space-x-4 mt-1 text-sm text-gray-600">
+                            {contact.title && <span>{contact.title}</span>}
+                            {contact.company && <span className="text-blue-600">{contact.company}</span>}
+                            {contact.role && <span>{contact.role}</span>}
+                          </div>
+                          <div className="mt-2">
+                            {contact.meeting_count > 0 ? (
+                              <button
+                                onClick={() => toggleExpanded(contact.contact_id)}
+                                className="text-sm text-gray-600 hover:text-gray-900 flex items-center space-x-1"
+                              >
+                                <svg
+                                  className={`w-4 h-4 transition-transform ${expandedId === contact.contact_id ? 'rotate-90' : ''}`}
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                </svg>
+                                <span>
+                                  {contact.meeting_count} meeting{contact.meeting_count !== 1 ? 's' : ''}
+                                </span>
+                              </button>
+                            ) : (
+                              <span className="text-sm text-gray-400">
+                                No meetings recorded
+                                {contact.manually_retained && ' (manually retained)'}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex items-center space-x-2 ml-4">
+                    {editingId === contact.contact_id ? (
+                      <>
                         <button
                           onClick={handleSave}
-                          className="text-green-600 hover:text-green-900 text-sm mr-2"
+                          className="px-3 py-1 text-sm text-green-600 hover:text-green-900"
                         >
                           Save
                         </button>
@@ -214,43 +267,59 @@ export default function ParticipantBank() {
                             setEditingId(null)
                             setEditedContact(null)
                           }}
-                          className="text-gray-600 hover:text-gray-900 text-sm"
+                          className="px-3 py-1 text-sm text-gray-600 hover:text-gray-900"
                         >
                           Cancel
                         </button>
-                      </td>
-                    </>
-                  ) : (
-                    <>
-                      <td className="px-4 py-3 font-medium text-gray-900">{contact.name}</td>
-                      <td className="px-4 py-3 text-sm text-gray-500">{contact.title || '-'}</td>
-                      <td className="px-4 py-3 text-sm text-gray-500">{contact.company || '-'}</td>
-                      <td className="px-4 py-3 text-sm text-gray-500">{contact.role || '-'}</td>
-                      <td className="px-4 py-3 text-sm text-gray-500">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
-                          {contact.usage_count}x
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-sm">
+                      </>
+                    ) : (
+                      <>
                         <button
                           onClick={() => handleEdit(contact)}
-                          className="text-indigo-600 hover:text-indigo-900 mr-3"
+                          className="px-3 py-1 text-sm text-indigo-600 hover:text-indigo-900"
                         >
                           Edit
                         </button>
                         <button
-                          onClick={() => handleDelete(contact.id)}
-                          className="text-red-600 hover:text-red-900"
+                          onClick={() => handleDelete(contact.contact_id)}
+                          className="px-3 py-1 text-sm text-red-600 hover:text-red-900"
                         >
                           Remove
                         </button>
-                      </td>
-                    </>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* Expanded meeting list */}
+                {expandedId === contact.contact_id && contact.meetings.length > 0 && (
+                  <div className="mt-4 pl-7 space-y-2">
+                    {contact.meetings.map((meeting) => (
+                      <div key={meeting.id} className="bg-gray-50 rounded-lg p-3">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <h4 className="font-medium text-gray-900">{meeting.title}</h4>
+                            <p className="text-sm text-gray-600 mt-1">
+                              {new Date(meeting.date).toLocaleDateString()}
+                            </p>
+                            <p className="text-sm text-gray-500 mt-1 line-clamp-2">
+                              {meeting.summary}
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => window.location.href = `/dashboard?meeting=${meeting.id}`}
+                            className="ml-3 text-sm text-indigo-600 hover:text-indigo-900"
+                          >
+                            View →
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>
