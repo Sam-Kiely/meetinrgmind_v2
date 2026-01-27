@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { createClient } from '@supabase/supabase-js'
+import { supabase } from '@/lib/supabase'
 
 interface Meeting {
   id: string
@@ -35,11 +35,6 @@ export default function ParticipantBank() {
 
   const fetchContacts = async () => {
     try {
-      const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      )
-
       const { data: { session } } = await supabase.auth.getSession()
 
       if (!session) {
@@ -73,11 +68,6 @@ export default function ParticipantBank() {
     if (!editedContact) return
 
     try {
-      const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      )
-
       const { data: { session } } = await supabase.auth.getSession()
 
       if (!session) return
@@ -112,11 +102,6 @@ export default function ParticipantBank() {
     if (!confirm('Are you sure you want to remove this contact from your bank?')) return
 
     try {
-      const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      )
-
       const { data: { session } } = await supabase.auth.getSession()
 
       if (!session) return

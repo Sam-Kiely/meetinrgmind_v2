@@ -6,7 +6,7 @@ import ActionItemCard from './ActionItemCard'
 import { EmailSection } from './EmailSection'
 import ParticipantCard from './ParticipantCard'
 import MergeConfirmationModal from './MergeConfirmationModal'
-import { createClient } from '@supabase/supabase-js'
+import { supabase } from '@/lib/supabase'
 
 interface SimilarParticipant {
   contact_id: string
@@ -31,11 +31,6 @@ export default function ResultsDisplay({ analysis }: ResultsDisplayProps) {
     // Load existing contacts to check which participants are already in the bank
     const loadExistingContacts = async () => {
       try {
-        const supabase = createClient(
-          process.env.NEXT_PUBLIC_SUPABASE_URL!,
-          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-        )
-
         const { data: { session } } = await supabase.auth.getSession()
 
         if (!session) return
@@ -80,11 +75,6 @@ export default function ResultsDisplay({ analysis }: ResultsDisplayProps) {
   const handleAddToContacts = async (participant: Participant) => {
     try {
       // Get the current session token
-      const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      )
-
       const { data: { session } } = await supabase.auth.getSession()
 
       if (!session) {
@@ -126,11 +116,6 @@ export default function ResultsDisplay({ analysis }: ResultsDisplayProps) {
     if (!currentParticipantToAdd) return
 
     try {
-      const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      )
-
       const { data: { session } } = await supabase.auth.getSession()
 
       if (!session) return
@@ -166,11 +151,6 @@ export default function ResultsDisplay({ analysis }: ResultsDisplayProps) {
     if (!currentParticipantToAdd) return
 
     try {
-      const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      )
-
       const { data: { session } } = await supabase.auth.getSession()
 
       if (!session) return

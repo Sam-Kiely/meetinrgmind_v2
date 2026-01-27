@@ -7,6 +7,7 @@ import { useAuth } from '@/lib/auth'
 import { EmailSection } from '@/components/EmailSection'
 import ParticipantBank from '@/components/ParticipantBank'
 import ResultsDisplay from '@/components/ResultsDisplay'
+import { supabase } from '@/lib/supabase'
 
 interface SavedMeeting {
   id: string
@@ -31,15 +32,22 @@ export default function DashboardPage() {
   const [error, setError] = useState('')
   const { user } = useAuth()
 
-  const userId = user?.id || 'demo-user-id'
-
   useEffect(() => {
-    fetchMeetings()
-  }, [])
+    if (user?.id) {
+      fetchMeetings()
+    } else {
+      setIsLoading(false)
+    }
+  }, [user?.id])
 
   const fetchMeetings = async () => {
+    if (!user?.id) {
+      setIsLoading(false)
+      return
+    }
+
     try {
-      const response = await fetch(`/api/meetings?userId=${userId}`)
+      const response = await fetch(`/api/meetings?userId=${user.id}`)
       if (!response.ok) throw new Error('Failed to fetch meetings')
 
       const data = await response.json()
@@ -86,8 +94,7 @@ export default function DashboardPage() {
         })
         setMeetings(updatedMeetings)
 
-        // Save to localStorage
-        localStorage.setItem(`meetings_${userId}`, JSON.stringify(updatedMeetings))
+        // Note: In production, this would sync with the database
       }
 
     } catch (err) {
@@ -118,8 +125,7 @@ export default function DashboardPage() {
         })
         setMeetings(updatedMeetings)
 
-        // Save to localStorage
-        localStorage.setItem(`meetings_${userId}`, JSON.stringify(updatedMeetings))
+        // Note: In production, this would sync with the database
       }
 
     } catch (err) {
@@ -130,10 +136,18 @@ export default function DashboardPage() {
 
   const deleteMeeting = async (meetingId: string, retainParticipants: boolean = false) => {
     try {
+      // Get authentication token
+      const { data: { session } } = await supabase.auth.getSession()
+
+      if (!session) {
+        throw new Error('Authentication required')
+      }
+
       const response = await fetch(`/api/meetings/${meetingId}/delete`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
         },
         body: JSON.stringify({ retainParticipants })
       })
@@ -171,12 +185,21 @@ export default function DashboardPage() {
     const confirmDelete = confirm('Are you sure you want to delete this meeting? This action cannot be undone.')
     if (!confirmDelete) return
 
-    // First, check for orphaned participants
     try {
+      // Get authentication token
+      const { data: { session } } = await supabase.auth.getSession()
+
+      if (!session) {
+        setError('Authentication required')
+        return
+      }
+
+      // First, check for orphaned participants by doing a test delete
       const response = await fetch(`/api/meetings/${meetingId}/delete`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
         },
         body: JSON.stringify({ retainParticipants: false })
       })
@@ -201,10 +224,13 @@ export default function DashboardPage() {
             setSelectedMeeting(null)
           }
         }
+      } else {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to delete meeting')
       }
     } catch (err) {
       console.error('Error deleting meeting:', err)
-      setError('Failed to delete meeting')
+      setError('Failed to delete meeting: ' + (err as Error).message)
     }
   }
 
@@ -235,6 +261,23 @@ export default function DashboardPage() {
               ))}
             </div>
           </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!user) {
+    return (
+      <div className="py-8 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto text-center">
+          <h1 className="text-3xl font-bold text-gray-900 mb-4">Please Sign In</h1>
+          <p className="text-gray-600 mb-8">You need to be logged in to view your dashboard.</p>
+          <Link
+            href="/auth/signin"
+            className="px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
+          >
+            Sign In
+          </Link>
         </div>
       </div>
     )
