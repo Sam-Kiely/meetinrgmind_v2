@@ -1,31 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { transcribeAudio, validateAudioFile } from '@/lib/whisper'
+import { transcribeAudio, transcribeAudioFromUrl, transcribeAudioChunks } from '@/lib/whisper'
+import { uploadAudioToStorage } from '@/lib/storage'
+import { validateAudioFile } from '@/lib/whisper'
 
 export const maxDuration = 60 // Maximum function duration: 60 seconds for Vercel
 export const runtime = 'nodejs' // Use Node.js runtime
 
-// Configure body parsing for large audio files
-export const config = {
-  api: {
-    bodyParser: {
-      sizeLimit: '25mb',
-    },
-  },
-}
-
 export async function POST(request: NextRequest) {
   try {
-    // Check content length before processing
-    const contentLength = request.headers.get('content-length')
-    if (contentLength && parseInt(contentLength) > 25 * 1024 * 1024) {
-      return NextResponse.json(
-        { error: 'File size exceeds 25MB limit' },
-        { status: 413 }
-      )
-    }
-
     const formData = await request.formData()
     const audioFile = formData.get('audio') as File
+    const userId = formData.get('userId') as string
+    const useStorage = formData.get('useStorage') === 'true'
 
     if (!audioFile) {
       return NextResponse.json(
@@ -43,8 +29,30 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Transcribe the audio using Whisper API
-    const transcript = await transcribeAudio(audioFile)
+    let transcript = ''
+
+    // For files > 4MB, use Supabase Storage
+    if (audioFile.size > 4 * 1024 * 1024 || useStorage) {
+      if (!userId) {
+        return NextResponse.json(
+          { error: 'User ID required for storage upload' },
+          { status: 400 }
+        )
+      }
+
+      // Upload to Supabase Storage
+      const { url, chunks } = await uploadAudioToStorage(audioFile, userId)
+
+      // Transcribe based on whether it was chunked
+      if (chunks && chunks.length > 1) {
+        transcript = await transcribeAudioChunks(chunks)
+      } else {
+        transcript = await transcribeAudioFromUrl(url)
+      }
+    } else {
+      // Small files can go directly to Whisper
+      transcript = await transcribeAudio(audioFile)
+    }
 
     if (!transcript || transcript.trim() === '') {
       return NextResponse.json(

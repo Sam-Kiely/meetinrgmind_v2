@@ -1,4 +1,6 @@
 import OpenAI from 'openai'
+import { supabase } from './supabase'
+import { getSignedUrl } from './storage'
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
@@ -61,6 +63,43 @@ export function validateAudioFile(file: File): { isValid: boolean; error?: strin
   }
 
   return { isValid: true }
+}
+
+export async function transcribeAudioFromUrl(url: string): Promise<string> {
+  try {
+    // Fetch the audio file from URL
+    const response = await fetch(url)
+    if (!response.ok) {
+      throw new Error('Failed to fetch audio from URL')
+    }
+
+    const blob = await response.blob()
+    const file = new File([blob], 'audio.mp3', { type: blob.type })
+
+    return await transcribeAudio(file)
+  } catch (error) {
+    console.error('Error transcribing audio from URL:', error)
+    throw new Error('Failed to transcribe audio from URL')
+  }
+}
+
+export async function transcribeAudioChunks(chunkPaths: string[]): Promise<string> {
+  try {
+    const transcripts: string[] = []
+
+    // Transcribe each chunk
+    for (const chunkPath of chunkPaths) {
+      const signedUrl = await getSignedUrl(chunkPath)
+      const transcript = await transcribeAudioFromUrl(signedUrl)
+      transcripts.push(transcript)
+    }
+
+    // Combine all transcripts
+    return transcripts.join(' ')
+  } catch (error) {
+    console.error('Error transcribing audio chunks:', error)
+    throw new Error('Failed to transcribe audio chunks')
+  }
 }
 
 export function getAudioDuration(file: File): Promise<number> {

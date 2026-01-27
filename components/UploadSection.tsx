@@ -1,16 +1,18 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { MeetingAnalysis } from '@/types'
 import { RecordingDisclaimer } from './RecordingDisclaimer'
 import { useRecordingDisclaimer } from '@/hooks/useRecordingDisclaimer'
+import { supabase } from '@/lib/supabase'
+import { User } from '@supabase/supabase-js'
 
 interface UploadSectionProps {
   onAnalysisComplete: (analysis: MeetingAnalysis, transcript: string) => void
 }
 
 type UploadMode = 'text' | 'audio'
-type ProcessingStep = 'idle' | 'transcribing' | 'analyzing'
+type ProcessingStep = 'idle' | 'uploading' | 'transcribing' | 'analyzing'
 
 export default function UploadSection({ onAnalysisComplete }: UploadSectionProps) {
   const [mode, setMode] = useState<UploadMode>('text')
@@ -20,7 +22,17 @@ export default function UploadSection({ onAnalysisComplete }: UploadSectionProps
   const [error, setError] = useState('')
   const [dragActive, setDragActive] = useState(false)
   const [pendingFile, setPendingFile] = useState<File | null>(null)
+  const [uploadProgress, setUploadProgress] = useState(0)
+  const [user, setUser] = useState<User | null>(null)
   const { hasAcknowledged, showDisclaimer, setShowDisclaimer, acknowledge } = useRecordingDisclaimer()
+
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      setUser(user)
+    }
+    getUser()
+  }, [])
 
   const sampleTranscript = `Client Meeting - Website Redesign Project
 Date: January 20, 2026
@@ -49,12 +61,12 @@ Sarah: Sounds good. I'll send a calendar invite. Thanks John!`
     if (!files || files.length === 0) return
 
     const file = files[0]
-    const maxSize = 25 * 1024 * 1024 // 25MB
+    const maxSize = 200 * 1024 * 1024 // 200MB (we'll chunk anything over 25MB)
     const allowedTypes = ['audio/mpeg', 'audio/mp4', 'audio/wav', 'audio/webm', 'video/mp4', 'video/webm', 'audio/ogg', 'audio/flac', 'audio/x-m4a', 'audio/m4a']
     const allowedExtensions = ['.mp3', '.mp4', '.wav', '.webm', '.ogg', '.flac', '.m4a']
 
     if (file.size > maxSize) {
-      setError('File size must be less than 25MB')
+      setError('File size must be less than 200MB')
       return
     }
 
@@ -102,6 +114,12 @@ Sarah: Sounds good. I'll send a calendar invite. Thanks John!`
   const transcribeAudio = async (file: File): Promise<string> => {
     const formData = new FormData()
     formData.append('audio', file)
+
+    // Add user ID if available for files > 4MB (will use Supabase Storage)
+    if (user?.id && file.size > 4 * 1024 * 1024) {
+      formData.append('userId', user.id)
+      formData.append('useStorage', 'true')
+    }
 
     const response = await fetch('/api/transcribe', {
       method: 'POST',
@@ -157,7 +175,14 @@ Sarah: Sounds good. I'll send a calendar invite. Thanks John!`
           return
         }
 
-        setProcessingStep('transcribing')
+        // Show uploading status for large files
+        if (selectedFile.size > 4 * 1024 * 1024) {
+          setProcessingStep('uploading')
+          setUploadProgress(0)
+        } else {
+          setProcessingStep('transcribing')
+        }
+
         finalTranscript = await transcribeAudio(selectedFile)
         setTranscript(finalTranscript) // Update transcript display
       }
@@ -198,6 +223,7 @@ Sarah: Sounds good. I'll send a calendar invite. Thanks John!`
   }
 
   const getProcessingText = () => {
+    if (processingStep === 'uploading') return `Uploading... ${uploadProgress}%`
     if (processingStep === 'transcribing') return 'Transcribing audio...'
     if (processingStep === 'analyzing') return 'Analyzing meeting...'
     return mode === 'audio' && selectedFile ? 'Transcribe & Analyze' : 'Extract Action Items'
@@ -302,7 +328,7 @@ Sarah: Sounds good. I'll send a calendar invite. Thanks John!`
                     </label>
                   </div>
                   <p className="text-xs text-gray-400">
-                    Supports: MP3, M4A, MP4, WAV, WEBM, OGG, FLAC (max 25MB)
+                    Supports: MP3, M4A, MP4, WAV, WEBM, OGG, FLAC (max 200MB)
                   </p>
                 </div>
               </div>
