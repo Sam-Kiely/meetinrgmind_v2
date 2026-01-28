@@ -182,28 +182,28 @@ export default function ParticipantBank() {
                           type="text"
                           value={editedContact?.name || ''}
                           onChange={(e) => setEditedContact({ ...editedContact!, name: e.target.value })}
-                          className="px-2 py-1 text-sm border rounded"
+                          className="px-2 py-1 text-sm text-gray-900 border rounded bg-white"
                           placeholder="Name"
                         />
                         <input
                           type="text"
                           value={editedContact?.title || ''}
                           onChange={(e) => setEditedContact({ ...editedContact!, title: e.target.value })}
-                          className="px-2 py-1 text-sm border rounded"
+                          className="px-2 py-1 text-sm text-gray-900 border rounded bg-white"
                           placeholder="Title"
                         />
                         <input
                           type="text"
                           value={editedContact?.company || ''}
                           onChange={(e) => setEditedContact({ ...editedContact!, company: e.target.value })}
-                          className="px-2 py-1 text-sm border rounded"
+                          className="px-2 py-1 text-sm text-gray-900 border rounded bg-white"
                           placeholder="Company"
                         />
                         <input
                           type="text"
                           value={editedContact?.role || ''}
                           onChange={(e) => setEditedContact({ ...editedContact!, role: e.target.value })}
-                          className="px-2 py-1 text-sm border rounded"
+                          className="px-2 py-1 text-sm text-gray-900 border rounded bg-white"
                           placeholder="Role"
                         />
                       </div>

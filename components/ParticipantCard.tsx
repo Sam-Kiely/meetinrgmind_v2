@@ -61,7 +61,7 @@ export default function ParticipantCard({
               type="text"
               value={editedParticipant.name}
               onChange={(e) => setEditedParticipant({ ...editedParticipant, name: e.target.value })}
-              className="w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-2 py-1 text-sm text-gray-900 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
               placeholder="Full name"
             />
           </div>
@@ -72,7 +72,7 @@ export default function ParticipantCard({
               type="text"
               value={editedParticipant.title || ''}
               onChange={(e) => setEditedParticipant({ ...editedParticipant, title: e.target.value })}
-              className="w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-2 py-1 text-sm text-gray-900 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
               placeholder="e.g., Project Manager"
             />
           </div>
@@ -83,7 +83,7 @@ export default function ParticipantCard({
               type="text"
               value={editedParticipant.role || ''}
               onChange={(e) => setEditedParticipant({ ...editedParticipant, role: e.target.value })}
-              className="w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-2 py-1 text-sm text-gray-900 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
               placeholder="e.g., Client, Team Lead"
             />
           </div>
@@ -94,7 +94,7 @@ export default function ParticipantCard({
               type="text"
               value={editedParticipant.company || ''}
               onChange={(e) => setEditedParticipant({ ...editedParticipant, company: e.target.value })}
-              className="w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-2 py-1 text-sm text-gray-900 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
               placeholder="Company name"
             />
           </div>
