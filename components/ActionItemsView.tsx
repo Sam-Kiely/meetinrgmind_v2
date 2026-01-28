@@ -25,9 +25,11 @@ export default function ActionItemsView({ view, onClose, onUpdate }: ActionItems
   const [actionItems, setActionItems] = useState<ActionItem[]>([])
   const [loading, setLoading] = useState(true)
   const [groupedItems, setGroupedItems] = useState<{ [key: string]: ActionItem[] }>({})
+  const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set()) // Track locally checked items in Outstanding view
 
   useEffect(() => {
     fetchActionItems()
+    setCheckedItems(new Set()) // Reset checked items when view changes
   }, [view])
 
   const fetchActionItems = async () => {
@@ -111,6 +113,19 @@ export default function ActionItemsView({ view, onClose, onUpdate }: ActionItems
   }
 
   const handleToggleComplete = async (item: ActionItem) => {
+    // For Outstanding view, just track locally and don't save yet
+    if (view === 'outstanding') {
+      const newCheckedItems = new Set(checkedItems)
+      if (checkedItems.has(item.id)) {
+        newCheckedItems.delete(item.id)
+      } else {
+        newCheckedItems.add(item.id)
+      }
+      setCheckedItems(newCheckedItems)
+      return
+    }
+
+    // For Completed view, save immediately as before
     try {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) return
@@ -177,6 +192,79 @@ export default function ActionItemsView({ view, onClose, onUpdate }: ActionItems
   }
 
 
+  const handleSaveAndClose = async () => {
+    // Save all checked items in Outstanding view
+    if (view === 'outstanding' && checkedItems.size > 0) {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) {
+          onClose()
+          return
+        }
+
+        // Group checked items by meeting
+        const itemsByMeeting = new Map<string, ActionItem[]>()
+        actionItems.forEach(item => {
+          if (checkedItems.has(item.id)) {
+            const items = itemsByMeeting.get(item.meeting_id) || []
+            items.push(item)
+            itemsByMeeting.set(item.meeting_id, items)
+          }
+        })
+
+        // Save all checked items
+        const savePromises = Array.from(itemsByMeeting.entries()).map(async ([meetingId, items]) => {
+          // Get the current meeting
+          const { data: meeting } = await supabase
+            .from('meetings')
+            .select('id, action_items, results')
+            .eq('id', meetingId)
+            .single()
+
+          if (!meeting) return
+
+          // Get action items from either source
+          let currentItems = (meeting as any).action_items
+          if (!currentItems || (Array.isArray(currentItems) && currentItems.length === 0)) {
+            currentItems = (meeting as any).results?.actionItems || []
+          }
+
+          // Update checked items to completed
+          const updatedItems = currentItems.map((ai: any) => {
+            const isChecked = items.some(item =>
+              ai.id === item.id || (ai.task === item.task && ai.owner === item.owner)
+            )
+            if (isChecked) {
+              return { ...ai, completed: true }
+            }
+            return ai
+          })
+
+          // Save to database
+          const response = await fetch(`/api/meetings/${meetingId}/action-items`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${session.access_token}`
+            },
+            body: JSON.stringify({ actionItems: updatedItems })
+          })
+
+          if (!response.ok) {
+            console.error('Failed to save action items for meeting:', meetingId)
+          }
+        })
+
+        await Promise.all(savePromises)
+        onUpdate?.() // Refresh parent data
+      } catch (error) {
+        console.error('Error saving checked items:', error)
+      }
+    }
+
+    onClose()
+  }
+
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'high': return 'text-red-600 bg-red-50 border-red-200'
@@ -206,7 +294,7 @@ export default function ActionItemsView({ view, onClose, onUpdate }: ActionItems
             {view === 'outstanding' ? 'Outstanding Action Items' : 'Completed Tasks'}
           </h2>
           <button
-            onClick={onClose}
+            onClick={view === 'outstanding' ? handleSaveAndClose : onClose}
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -259,14 +347,20 @@ export default function ActionItemsView({ view, onClose, onUpdate }: ActionItems
                               <button
                                 onClick={() => handleToggleComplete(item)}
                                 className={`flex-shrink-0 w-5 h-5 rounded border-2 mr-3 mt-0.5 transition-all duration-200 ${
-                                  item.completed
+                                  view === 'outstanding' && checkedItems.has(item.id)
+                                    ? 'bg-green-500 border-green-500 animate-pulse'
+                                    : item.completed
                                     ? 'bg-green-500 border-green-500 hover:bg-green-600 hover:border-green-600'
                                     : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
                                 }`}
-                                title={item.completed ? 'Mark as incomplete' : 'Mark as complete'}
+                                title={
+                                  view === 'outstanding'
+                                    ? checkedItems.has(item.id) ? 'Uncheck item' : 'Check item'
+                                    : item.completed ? 'Mark as incomplete' : 'Mark as complete'
+                                }
                               >
-                                {item.completed && (
-                                  <svg className="w-3 h-3 text-white m-auto" fill="currentColor" viewBox="0 0 20 20">
+                                {(view === 'outstanding' ? checkedItems.has(item.id) : item.completed) && (
+                                  <svg className="w-3 h-3 text-white m-auto animate-scale-in" fill="currentColor" viewBox="0 0 20 20">
                                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                                   </svg>
                                 )}
@@ -319,10 +413,10 @@ export default function ActionItemsView({ view, onClose, onUpdate }: ActionItems
               {actionItems.length} {view === 'outstanding' ? 'outstanding' : 'completed'} item{actionItems.length !== 1 ? 's' : ''} across {Object.keys(groupedItems).length} meeting{Object.keys(groupedItems).length !== 1 ? 's' : ''}
             </p>
             <button
-              onClick={onClose}
+              onClick={view === 'outstanding' ? handleSaveAndClose : onClose}
               className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
             >
-              Close
+              {view === 'outstanding' ? 'Save & Close' : 'Close'}
             </button>
           </div>
         </div>
