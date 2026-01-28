@@ -90,55 +90,74 @@ function DashboardContent() {
   }
 
   const updateActionItem = async (actionItemId: string, completed: boolean) => {
+    if (!selectedMeeting) return
+
     try {
-      // Update local state immediately for responsiveness
-      if (selectedMeeting) {
-        const updatedActionItems = selectedMeeting.action_items.map(item =>
-          item.id === actionItemId ? { ...item, completed } : item
+      // Get fresh data to avoid stale state issues
+      const currentItems = selectedMeeting.action_items || []
+
+      // Find and update only the specific item
+      const updatedActionItems = currentItems.map(item => {
+        if (item.id === actionItemId) {
+          return { ...item, completed }
+        }
+        return item
+      })
+
+      // Update local state
+      const updatedMeeting = {
+        ...selectedMeeting,
+        action_items: updatedActionItems
+      }
+      setSelectedMeeting(updatedMeeting)
+
+      // Update meetings list
+      setMeetings(prevMeetings =>
+        prevMeetings.map(meeting =>
+          meeting.id === selectedMeeting.id ? updatedMeeting : meeting
         )
-        const updatedMeeting = {
-          ...selectedMeeting,
-          action_items: updatedActionItems
-        }
-        setSelectedMeeting(updatedMeeting)
+      )
 
-        // Also update the meetings list
-        const updatedMeetings = meetings.map(meeting => {
-          if (meeting.id === selectedMeeting?.id) {
-            return updatedMeeting
-          }
-          return meeting
-        })
-        setMeetings(updatedMeetings)
-
-        // Persist to database using API endpoint
-        const { data: { session } } = await supabase.auth.getSession()
-        if (session) {
-          try {
-            const response = await fetch(`/api/meetings/${selectedMeeting.id}/action-items`, {
-              method: 'PUT',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${session.access_token}`
-              },
-              body: JSON.stringify({ actionItems: updatedActionItems })
-            })
-
-            if (!response.ok) {
-              console.error('Error saving action item status')
-            } else {
-              // Also refresh the meetings list to update any cached data
-              fetchMeetings()
-            }
-          } catch (error) {
-            console.error('Error saving action item status:', error)
-          }
-        }
+      // Persist to database
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        return
       }
 
+      const response = await fetch(`/api/meetings/${selectedMeeting.id}/action-items`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ actionItems: updatedActionItems })
+      })
+
+      if (!response.ok) {
+        // Revert local changes on failure
+        setSelectedMeeting(selectedMeeting)
+        setMeetings(prevMeetings =>
+          prevMeetings.map(meeting =>
+            meeting.id === selectedMeeting.id ? selectedMeeting : meeting
+          )
+        )
+        setError('Failed to update action item')
+      } else {
+        // Only refresh meetings list after successful database update
+        setTimeout(() => fetchMeetings(), 100)
+      }
     } catch (err) {
       console.error('Error updating action item:', err)
       setError('Failed to update action item')
+      // Revert local changes on error
+      if (selectedMeeting) {
+        setSelectedMeeting(selectedMeeting)
+        setMeetings(prevMeetings =>
+          prevMeetings.map(meeting =>
+            meeting.id === selectedMeeting.id ? selectedMeeting : meeting
+          )
+        )
+      }
     }
   }
 
@@ -595,19 +614,32 @@ function DashboardContent() {
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1 flex items-start space-x-3">
-                        <input
-                          type="checkbox"
-                          checked={item.completed}
-                          onChange={(e) => updateActionItem(item.id, e.target.checked)}
-                          className="mt-1 h-4 w-4 text-black focus:ring-black border-gray-300 rounded"
-                        />
+                        <button
+                          onClick={() => updateActionItem(item.id, !item.completed)}
+                          className={`flex-shrink-0 w-5 h-5 rounded border-2 mt-1 transition-all duration-200 ${
+                            item.completed
+                              ? 'bg-green-500 border-green-500 hover:bg-green-600 hover:border-green-600'
+                              : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
+                          }`}
+                          title={item.completed ? 'Mark as incomplete' : 'Mark as complete'}
+                        >
+                          {item.completed && (
+                            <svg className="w-3 h-3 text-white m-auto" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                          )}
+                        </button>
                         <div className="flex-1">
-                          <h4 className={`font-semibold ${item.completed ? 'line-through text-gray-500' : 'text-gray-900'}`}>
+                          <h4 className={`font-semibold transition-all duration-200 ${item.completed ? 'line-through text-gray-500' : 'text-gray-900'}`}>
                             {item.task}
                           </h4>
                           <div className="text-sm space-y-1 mt-1">
-                            <p className="text-gray-700"><span className="font-medium text-gray-900">Owner:</span> {item.owner}</p>
-                            <p className="text-gray-700"><span className="font-medium text-gray-900">Deadline:</span> {item.deadline}</p>
+                            <p className={`transition-all duration-200 ${item.completed ? 'text-gray-500' : 'text-gray-700'}`}>
+                              <span className="font-medium text-gray-900">Owner:</span> {item.owner}
+                            </p>
+                            <p className={`transition-all duration-200 ${item.completed ? 'text-gray-500' : 'text-gray-700'}`}>
+                              <span className="font-medium text-gray-900">Deadline:</span> {item.deadline}
+                            </p>
                           </div>
                         </div>
                       </div>

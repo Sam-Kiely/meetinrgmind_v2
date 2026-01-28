@@ -258,11 +258,12 @@ export default function ActionItemsView({ view, onClose, onUpdate }: ActionItems
                             <div className="flex items-start">
                               <button
                                 onClick={() => handleToggleComplete(item)}
-                                className={`flex-shrink-0 w-5 h-5 rounded border-2 mr-3 mt-0.5 transition-colors ${
+                                className={`flex-shrink-0 w-5 h-5 rounded border-2 mr-3 mt-0.5 transition-all duration-200 ${
                                   item.completed
-                                    ? 'bg-green-500 border-green-500'
-                                    : 'border-gray-300 hover:border-gray-400'
+                                    ? 'bg-green-500 border-green-500 hover:bg-green-600 hover:border-green-600'
+                                    : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
                                 }`}
+                                title={item.completed ? 'Mark as incomplete' : 'Mark as complete'}
                               >
                                 {item.completed && (
                                   <svg className="w-3 h-3 text-white m-auto" fill="currentColor" viewBox="0 0 20 20">
@@ -274,16 +275,20 @@ export default function ActionItemsView({ view, onClose, onUpdate }: ActionItems
                               <div className="flex-1">
                                 <div className="flex items-start justify-between">
                                   <div className="flex-1">
-                                    <p className={`font-medium text-gray-900 ${
-                                      item.completed ? 'line-through' : ''
+                                    <p className={`font-medium transition-all duration-200 ${
+                                      item.completed ? 'line-through text-gray-500' : 'text-gray-900'
                                     }`}>
                                       {item.task}
                                     </p>
                                     <div className="flex items-center space-x-4 mt-1 text-sm">
-                                      <span className="text-gray-600">
+                                      <span className={`transition-all duration-200 ${
+                                        item.completed ? 'text-gray-500' : 'text-gray-600'
+                                      }`}>
                                         Owner: {item.owner}
                                       </span>
-                                      <span className={deadlineStatus.color}>
+                                      <span className={`transition-all duration-200 ${
+                                        item.completed ? 'text-gray-500' : deadlineStatus.color
+                                      }`}>
                                         {deadlineStatus.text}
                                       </span>
                                     </div>
