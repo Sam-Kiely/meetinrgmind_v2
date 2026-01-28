@@ -75,11 +75,6 @@ export default function HomePage() {
               MeetingMind is an AI-powered assistant that extracts action items from meeting transcripts
               and generates follow-up emails in 30 seconds. Action-first, not transcript-first.
             </p>
-            <div className="flex justify-center mb-12">
-              <a href="/how-it-works" className="px-8 py-4 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-semibold">
-                See How It Works
-              </a>
-            </div>
           </div>
 
           <UploadSection onAnalysisComplete={handleAnalysisComplete} />
@@ -116,6 +111,46 @@ export default function HomePage() {
                   Auto-generated emails for clients and internal team, ready to send.
                 </p>
               </div>
+            </div>
+          </div>
+
+          {/* Security Section */}
+          <div className="mt-20 bg-gray-50 rounded-xl p-12 max-w-6xl mx-auto">
+            <div className="text-center mb-8">
+              <div className="text-5xl mb-4">🔒</div>
+              <h2 className="text-3xl font-bold text-gray-900 mb-4">
+                Your Security is Our Priority
+              </h2>
+              <p className="text-gray-600 text-lg max-w-3xl mx-auto">
+                MeetingMind is designed with privacy-first architecture. Your sensitive meeting content is never stored.
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+              <div className="bg-white rounded-lg p-6">
+                <h3 className="font-semibold text-gray-900 mb-2">Immediate Deletion</h3>
+                <p className="text-gray-600 text-sm">
+                  Audio files and raw transcripts are automatically deleted immediately after AI processing completes. We never store your original meeting content.
+                </p>
+              </div>
+              <div className="bg-white rounded-lg p-6">
+                <h3 className="font-semibold text-gray-900 mb-2">Only Insights Saved</h3>
+                <p className="text-gray-600 text-sm">
+                  We only retain the extracted insights: summaries, action items, and key decisions. Your confidential discussions remain private.
+                </p>
+              </div>
+              <div className="bg-white rounded-lg p-6">
+                <h3 className="font-semibold text-gray-900 mb-2">Enterprise-Grade Security</h3>
+                <p className="text-gray-600 text-sm">
+                  All data transmission is encrypted with TLS 1.3. Your extracted insights are stored securely with industry-standard encryption at rest.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-8 text-center">
+              <p className="text-sm text-gray-500">
+                Perfect for companies with strict data governance requirements. No audio or transcript retention means reduced compliance risk.
+              </p>
             </div>
           </div>
         </>
