@@ -18,9 +18,10 @@ interface ActionItem {
 interface ActionItemsViewProps {
   view: 'outstanding' | 'completed'
   onClose: () => void
+  onUpdate?: () => void
 }
 
-export default function ActionItemsView({ view, onClose }: ActionItemsViewProps) {
+export default function ActionItemsView({ view, onClose, onUpdate }: ActionItemsViewProps) {
   const [actionItems, setActionItems] = useState<ActionItem[]>([])
   const [loading, setLoading] = useState(true)
   const [groupedItems, setGroupedItems] = useState<{ [key: string]: ActionItem[] }>({})
@@ -164,6 +165,8 @@ export default function ActionItemsView({ view, onClose }: ActionItemsViewProps)
       if (response.ok) {
         // Refresh the list to show updated state
         fetchActionItems()
+        // Notify parent component to refresh its data
+        onUpdate?.()
       } else {
         console.error('Failed to update action item')
         alert('Failed to update action item. Please try again.')

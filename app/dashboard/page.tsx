@@ -126,6 +126,9 @@ function DashboardContent() {
 
             if (!response.ok) {
               console.error('Error saving action item status')
+            } else {
+              // Also refresh the meetings list to update any cached data
+              fetchMeetings()
             }
           } catch (error) {
             console.error('Error saving action item status:', error)
@@ -176,6 +179,9 @@ function DashboardContent() {
 
             if (!response.ok) {
               console.error('Error saving action item status')
+            } else {
+              // Also refresh the meetings list to update any cached data
+              fetchMeetings()
             }
           } catch (error) {
             console.error('Error saving action item status:', error)
@@ -444,7 +450,12 @@ function DashboardContent() {
           {showActionItems && (
             <ActionItemsView
               view={showActionItems}
-              onClose={() => setShowActionItems(null)}
+              onClose={() => {
+                setShowActionItems(null)
+                // Refresh meetings data when modal closes to ensure sync
+                fetchMeetings()
+              }}
+              onUpdate={fetchMeetings}
             />
           )}
 
