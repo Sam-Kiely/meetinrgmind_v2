@@ -18,14 +18,14 @@ export default function HowItWorksPage() {
       number: '2',
       title: 'AI Analysis',
       subtitle: 'Advanced processing and extraction',
-      description: 'Our Claude-powered AI analyzes your meeting content with enterprise-grade accuracy. The system automatically transcribes audio files, identifies participants, extracts action items, and categorizes decisions and key dates.',
+      description: 'Our Claude-powered AI analyzes your meeting content with enterprise-grade accuracy. The system automatically transcribes audio files, identifies participants, extracts action items, and categorizes decisions and key dates. Audio files and raw transcripts are immediately deleted after processing - we only store the extracted insights.',
       features: [
         'Automatic audio transcription',
         'Participant identification',
         'Action items with owners and deadlines',
         'Key decisions and outcomes',
         'Important dates and milestones',
-        'Priority classification'
+        'Audio/transcripts deleted after processing'
       ],
       image: '🤖'
     },
@@ -64,8 +64,8 @@ export default function HowItWorksPage() {
     },
     {
       icon: '🔒',
-      title: 'Enterprise Security',
-      description: 'Your meeting data is processed securely with automatic cleanup and enterprise-grade privacy protection.'
+      title: 'Zero Data Retention',
+      description: 'Audio files and raw transcripts are deleted immediately after processing. We only store extracted insights, never your original content.'
     }
   ]
 
@@ -172,6 +172,46 @@ export default function HowItWorksPage() {
                 </ul>
               </div>
             ))}
+          </div>
+        </div>
+
+        {/* Security Section */}
+        <div className="mt-20 bg-gray-50 rounded-xl p-12">
+          <div className="text-center mb-8">
+            <div className="text-5xl mb-4">🔒</div>
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">
+              Your Security is Our Priority
+            </h2>
+            <p className="text-gray-600 text-lg max-w-3xl mx-auto">
+              MeetingMind is designed with privacy-first architecture. Your sensitive meeting content is never stored.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+            <div className="bg-white rounded-lg p-6">
+              <h3 className="font-semibold text-gray-900 mb-2">Immediate Deletion</h3>
+              <p className="text-gray-600 text-sm">
+                Audio files and raw transcripts are automatically deleted immediately after AI processing completes. We never store your original meeting content.
+              </p>
+            </div>
+            <div className="bg-white rounded-lg p-6">
+              <h3 className="font-semibold text-gray-900 mb-2">Only Insights Saved</h3>
+              <p className="text-gray-600 text-sm">
+                We only retain the extracted insights: summaries, action items, and key decisions. Your confidential discussions remain private.
+              </p>
+            </div>
+            <div className="bg-white rounded-lg p-6">
+              <h3 className="font-semibold text-gray-900 mb-2">Enterprise-Grade Security</h3>
+              <p className="text-gray-600 text-sm">
+                All data transmission is encrypted with TLS 1.3. Your extracted insights are stored securely with industry-standard encryption at rest.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-8 text-center">
+            <p className="text-sm text-gray-500">
+              Perfect for companies with strict data governance requirements. No audio or transcript retention means reduced compliance risk.
+            </p>
           </div>
         </div>
 
