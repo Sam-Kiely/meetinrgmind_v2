@@ -58,27 +58,6 @@ export default function UploadSection({ onAnalysisComplete }: UploadSectionProps
     getUser()
   }, [])
 
-  const sampleTranscript = `Client Meeting - Website Redesign Project
-Date: January 20, 2026
-
-Sarah (Client): Thanks for meeting today. We need to discuss the website redesign timeline.
-
-John (Project Manager): Of course. Based on our initial discussion, I'm thinking we can have wireframes ready by February 5th. Does that work?
-
-Sarah: That's perfect. One thing though - we need to add an e-commerce component. I know that wasn't in the original scope.
-
-John: Okay, that's a significant addition. I'll need to get a quote from the dev team. Can you send me the specific requirements? Like how many products, payment processors you want to integrate?
-
-Sarah: Sure, I'll email that by end of day Wednesday. We're looking at about 50 products initially, and we want Stripe and PayPal.
-
-John: Great. I'll have the updated quote to you by Friday. Also, who on your team should review the wireframes when they're ready?
-
-Sarah: That would be me and Tom from marketing. Loop us both in.
-
-John: Perfect. Let's reconnect next Monday to review everything.
-
-Sarah: Sounds good. I'll send a calendar invite. Thanks John!`
-
   const isProcessing = processingStep !== 'idle'
 
   const handleFileUpload = useCallback((files: FileList | null) => {
@@ -277,10 +256,6 @@ Sarah: Sounds good. I'll send a calendar invite. Thanks John!`
     }
   }
 
-  const loadSampleTranscript = () => {
-    setTranscript(sampleTranscript)
-    setMode('text')
-  }
 
   const clearFile = () => {
     setSelectedFile(null)
@@ -494,14 +469,7 @@ Sarah: Sounds good. I'll send a calendar invite. Thanks John!`
           </div>
         )}
 
-        <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <button
-            onClick={loadSampleTranscript}
-            className="px-6 py-3 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-          >
-            Try Demo with Sample
-          </button>
-
+        <div className="flex justify-center">
           <button
             onClick={handleProcess}
             disabled={isProcessing}
