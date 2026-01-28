@@ -33,7 +33,6 @@ function DashboardContent() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
   const [showActionItems, setShowActionItems] = useState<'outstanding' | 'completed' | null>(null)
-  const [updatingItem, setUpdatingItem] = useState<string | null>(null) // Track which item is being updated
   const { user } = useAuth()
   const searchParams = useSearchParams()
 
@@ -90,156 +89,6 @@ function DashboardContent() {
     }
   }
 
-  const updateActionItem = async (actionItemId: string, completed: boolean) => {
-    if (!selectedMeeting) return
-
-    try {
-      // Prevent double-clicking or rapid clicks
-      if (updatingItem === actionItemId) return
-      setUpdatingItem(actionItemId)
-
-      // Get fresh data to avoid stale state issues
-      const currentItems = selectedMeeting.action_items || []
-
-      // Validate that we found exactly one item to update
-      const targetItem = currentItems.find(item => item.id === actionItemId)
-      if (!targetItem) {
-        console.error('Target action item not found:', actionItemId)
-        setUpdatingItem(null)
-        return
-      }
-
-      // Find and update only the specific item
-      const updatedActionItems = currentItems.map(item => {
-        if (item.id === actionItemId) {
-          return { ...item, completed }
-        }
-        return item
-      })
-
-      // Verify only one item changed
-      const changedCount = updatedActionItems.filter((item, index) =>
-        item.completed !== currentItems[index].completed
-      ).length
-
-      if (changedCount !== 1) {
-        console.error('Unexpected number of items changed:', changedCount)
-        setUpdatingItem(null)
-        return
-      }
-
-      // Update local state
-      const updatedMeeting = {
-        ...selectedMeeting,
-        action_items: updatedActionItems
-      }
-      setSelectedMeeting(updatedMeeting)
-
-      // Update meetings list
-      setMeetings(prevMeetings =>
-        prevMeetings.map(meeting =>
-          meeting.id === selectedMeeting.id ? updatedMeeting : meeting
-        )
-      )
-
-      // Persist to database
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) {
-        return
-      }
-
-      const response = await fetch(`/api/meetings/${selectedMeeting.id}/action-items`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
-        },
-        body: JSON.stringify({ actionItems: updatedActionItems })
-      })
-
-      if (!response.ok) {
-        // Revert local changes on failure
-        setSelectedMeeting(selectedMeeting)
-        setMeetings(prevMeetings =>
-          prevMeetings.map(meeting =>
-            meeting.id === selectedMeeting.id ? selectedMeeting : meeting
-          )
-        )
-        setError('Failed to update action item')
-      } else {
-        // Only refresh meetings list after successful database update
-        setTimeout(() => fetchMeetings(), 100)
-      }
-    } catch (err) {
-      console.error('Error updating action item:', err)
-      setError('Failed to update action item')
-      // Revert local changes on error
-      if (selectedMeeting) {
-        setSelectedMeeting(selectedMeeting)
-        setMeetings(prevMeetings =>
-          prevMeetings.map(meeting =>
-            meeting.id === selectedMeeting.id ? selectedMeeting : meeting
-          )
-        )
-      }
-    } finally {
-      // Always reset the updating flag
-      setUpdatingItem(null)
-    }
-  }
-
-  const deleteActionItem = async (actionItemId: string) => {
-    if (!confirm('Are you sure you want to delete this action item?')) return
-
-    try {
-      // Update local state immediately
-      if (selectedMeeting) {
-        const updatedActionItems = selectedMeeting.action_items.filter(item => item.id !== actionItemId)
-        const updatedMeeting = {
-          ...selectedMeeting,
-          action_items: updatedActionItems
-        }
-        setSelectedMeeting(updatedMeeting)
-
-        // Also update the meetings list
-        const updatedMeetings = meetings.map(meeting => {
-          if (meeting.id === selectedMeeting?.id) {
-            return updatedMeeting
-          }
-          return meeting
-        })
-        setMeetings(updatedMeetings)
-
-        // Persist to database using API endpoint
-        const { data: { session } } = await supabase.auth.getSession()
-        if (session) {
-          try {
-            const response = await fetch(`/api/meetings/${selectedMeeting.id}/action-items`, {
-              method: 'PUT',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${session.access_token}`
-              },
-              body: JSON.stringify({ actionItems: updatedActionItems })
-            })
-
-            if (!response.ok) {
-              console.error('Error saving action item status')
-            } else {
-              // Also refresh the meetings list to update any cached data
-              fetchMeetings()
-            }
-          } catch (error) {
-            console.error('Error saving action item status:', error)
-          }
-        }
-      }
-
-    } catch (err) {
-      console.error('Error deleting action item:', err)
-      setError('Failed to delete action item')
-    }
-  }
 
   const deleteMeeting = async (meetingId: string, retainParticipants: boolean = false) => {
     try {
@@ -496,10 +345,7 @@ function DashboardContent() {
           {showActionItems && (
             <ActionItemsView
               view={showActionItems}
-              onClose={() => {
-                setShowActionItems(null)
-                // No need to call fetchMeetings here since saveChangesAndClose handles it
-              }}
+              onClose={() => setShowActionItems(null)}
               onUpdate={fetchMeetings}
             />
           )}
@@ -626,12 +472,12 @@ function DashboardContent() {
           <div className="bg-white rounded-xl shadow-lg p-8">
             <h3 className="text-2xl font-bold text-gray-900 mb-6">✅ Action Items</h3>
             <div className="space-y-4">
-              {selectedMeeting.action_items?.length === 0 ? (
+              {(!selectedMeeting.results.actionItems || selectedMeeting.results.actionItems.length === 0) ? (
                 <p className="text-gray-500">No action items found in this meeting.</p>
               ) : (
-                selectedMeeting.action_items?.map((item) => (
+                selectedMeeting.results.actionItems?.map((item, index) => (
                   <div
-                    key={item.id}
+                    key={item.id || `action-item-${index}`}
                     className={`border-l-4 p-4 rounded-r-lg ${
                       item.priority === 'high' ? 'border-l-red-500 bg-red-50' :
                       item.priority === 'medium' ? 'border-l-amber-500 bg-amber-50' :
@@ -640,24 +486,19 @@ function DashboardContent() {
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1 flex items-start space-x-3">
-                        <button
-                          onClick={() => updateActionItem(item.id, !item.completed)}
-                          disabled={updatingItem === item.id}
-                          className={`flex-shrink-0 w-5 h-5 rounded border-2 mt-1 transition-all duration-200 ${
-                            updatingItem === item.id
-                              ? 'opacity-50 cursor-not-allowed border-gray-300'
-                              : item.completed
-                              ? 'bg-green-500 border-green-500 hover:bg-green-600 hover:border-green-600'
-                              : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
+                        <div
+                          className={`flex-shrink-0 w-5 h-5 rounded border-2 mt-1 ${
+                            item.completed
+                              ? 'bg-green-500 border-green-500'
+                              : 'border-gray-300'
                           }`}
-                          title={updatingItem === item.id ? 'Updating...' : item.completed ? 'Mark as incomplete' : 'Mark as complete'}
                         >
                           {item.completed && (
                             <svg className="w-3 h-3 text-white m-auto" fill="currentColor" viewBox="0 0 20 20">
                               <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                             </svg>
                           )}
-                        </button>
+                        </div>
                         <div className="flex-1">
                           <h4 className={`font-semibold transition-all duration-200 ${item.completed ? 'line-through text-gray-500' : 'text-gray-900'}`}>
                             {item.task}
@@ -676,15 +517,6 @@ function DashboardContent() {
                         <span className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${getPriorityColor(item.priority)}`}>
                           {item.priority} priority
                         </span>
-                        <button
-                          onClick={() => deleteActionItem(item.id)}
-                          className="text-gray-400 hover:text-red-600 transition-colors"
-                          title="Delete action item"
-                        >
-                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                          </svg>
-                        </button>
                       </div>
                     </div>
                   </div>
