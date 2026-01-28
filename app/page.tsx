@@ -75,13 +75,10 @@ export default function HomePage() {
               MeetingMind is an AI-powered assistant that extracts action items from meeting transcripts
               and generates follow-up emails in 30 seconds. Action-first, not transcript-first.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-              <button className="px-8 py-4 bg-black text-white rounded-xl hover:bg-gray-800 transition-colors font-semibold">
-                Try Demo
-              </button>
-              <button className="px-8 py-4 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-semibold">
+            <div className="flex justify-center mb-12">
+              <a href="/how-it-works" className="px-8 py-4 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-semibold">
                 See How It Works
-              </button>
+              </a>
             </div>
           </div>
 
