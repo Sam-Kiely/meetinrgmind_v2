@@ -25,6 +25,7 @@ export default function ActionItemsView({ view, onClose, onUpdate }: ActionItems
   const [actionItems, setActionItems] = useState<ActionItem[]>([])
   const [loading, setLoading] = useState(true)
   const [groupedItems, setGroupedItems] = useState<{ [key: string]: ActionItem[] }>({})
+  const [localChanges, setLocalChanges] = useState<{ [key: string]: boolean }>({}) // Track local completion state changes
 
   useEffect(() => {
     fetchActionItems()
@@ -84,8 +85,10 @@ export default function ActionItemsView({ view, onClose, onUpdate }: ActionItems
               meeting_date: meeting.meeting_date
             }
 
-            if ((view === 'outstanding' && !actionItem.completed) ||
-                (view === 'completed' && actionItem.completed)) {
+            // Filter based on ORIGINAL completed state, not local changes
+            const originalCompleted = item.completed || false
+            if ((view === 'outstanding' && !originalCompleted) ||
+                (view === 'completed' && originalCompleted)) {
               allItems.push(actionItem)
             }
           })
@@ -109,72 +112,115 @@ export default function ActionItemsView({ view, onClose, onUpdate }: ActionItems
     }
   }
 
-  const handleToggleComplete = async (item: ActionItem) => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) return
+  const handleToggleComplete = (item: ActionItem) => {
+    // Update local changes state to track what user has toggled
+    const currentState = localChanges[item.id] !== undefined ? localChanges[item.id] : item.completed
+    const newState = !currentState
 
-      // Get the current meeting with both action_items and results
-      const { data: meeting, error: fetchError } = await supabase
-        .from('meetings')
-        .select('id, action_items, results')
-        .eq('id', item.meeting_id)
-        .single()
+    setLocalChanges(prev => ({
+      ...prev,
+      [item.id]: newState
+    }))
 
-      if (fetchError || !meeting) {
-        console.error('Error fetching meeting:', fetchError)
-        return
-      }
+    // Update the actionItems state to reflect the visual change
+    setActionItems(prevItems =>
+      prevItems.map(actionItem =>
+        actionItem.id === item.id
+          ? { ...actionItem, completed: newState }
+          : actionItem
+      )
+    )
 
-      // Get action items from either source
-      let currentItems = (meeting as any).action_items
+    // Update grouped items as well
+    setGroupedItems(prevGrouped => {
+      const newGrouped = { ...prevGrouped }
+      Object.keys(newGrouped).forEach(key => {
+        newGrouped[key] = newGrouped[key].map(actionItem =>
+          actionItem.id === item.id
+            ? { ...actionItem, completed: newState }
+            : actionItem
+        )
+      })
+      return newGrouped
+    })
+  }
 
-      // If action_items is null/empty, check results.actionItems
-      if (!currentItems || (Array.isArray(currentItems) && currentItems.length === 0)) {
-        currentItems = (meeting as any).results?.actionItems || []
-      }
-
-      // Ensure we have an array
-      if (!Array.isArray(currentItems)) {
-        console.error('No action items found in meeting')
-        return
-      }
-
-      // Update the specific action item - toggle its current state
-      const updatedItems = currentItems.map((ai: any) => {
-        // Match by id or by task+owner if id is missing
-        const isMatch = ai.id === item.id ||
-                       (ai.task === item.task && ai.owner === item.owner)
-
-        if (isMatch) {
-          return { ...ai, completed: !item.completed }
+  const saveChangesAndClose = async () => {
+    // Save all local changes to the database before closing
+    if (Object.keys(localChanges).length > 0) {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) {
+          onClose()
+          return
         }
-        return ai
-      })
 
-      // Save using the API endpoint
-      const response = await fetch(`/api/meetings/${item.meeting_id}/action-items`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
-        },
-        body: JSON.stringify({ actionItems: updatedItems })
-      })
+        // Group changes by meeting to minimize API calls
+        const changesByMeeting: { [meetingId: string]: { itemId: string; newState: boolean }[] } = {}
 
-      if (response.ok) {
-        // Refresh the list to show updated state
-        fetchActionItems()
-        // Notify parent component to refresh its data
+        actionItems.forEach(item => {
+          if (localChanges[item.id] !== undefined) {
+            if (!changesByMeeting[item.meeting_id]) {
+              changesByMeeting[item.meeting_id] = []
+            }
+            changesByMeeting[item.meeting_id].push({
+              itemId: item.id,
+              newState: localChanges[item.id]
+            })
+          }
+        })
+
+        // Save changes for each meeting
+        const savePromises = Object.entries(changesByMeeting).map(async ([meetingId, changes]) => {
+          // Get current meeting data
+          const { data: meeting } = await supabase
+            .from('meetings')
+            .select('id, action_items, results')
+            .eq('id', meetingId)
+            .single()
+
+          if (!meeting) return
+
+          // Get action items from either source
+          let currentItems = (meeting as any).action_items
+          if (!currentItems || (Array.isArray(currentItems) && currentItems.length === 0)) {
+            currentItems = (meeting as any).results?.actionItems || []
+          }
+
+          // Apply all changes for this meeting
+          const updatedItems = currentItems.map((ai: any) => {
+            const change = changes.find(c => c.itemId === ai.id)
+            if (change) {
+              return { ...ai, completed: change.newState }
+            }
+            return ai
+          })
+
+          // Save to database
+          const response = await fetch(`/api/meetings/${meetingId}/action-items`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${session.access_token}`
+            },
+            body: JSON.stringify({ actionItems: updatedItems })
+          })
+
+          if (!response.ok) {
+            console.error('Failed to save changes for meeting:', meetingId)
+          }
+        })
+
+        await Promise.all(savePromises)
+
+        // Notify parent to refresh
         onUpdate?.()
-      } else {
-        console.error('Failed to update action item')
-        alert('Failed to update action item. Please try again.')
+      } catch (error) {
+        console.error('Error saving changes:', error)
       }
-    } catch (error) {
-      console.error('Error updating action item:', error)
-      alert('An error occurred while updating the action item.')
     }
+
+    onClose()
   }
 
   const getPriorityColor = (priority: string) => {
@@ -206,7 +252,7 @@ export default function ActionItemsView({ view, onClose, onUpdate }: ActionItems
             {view === 'outstanding' ? 'Outstanding Action Items' : 'Completed Tasks'}
           </h2>
           <button
-            onClick={onClose}
+            onClick={saveChangesAndClose}
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -319,7 +365,7 @@ export default function ActionItemsView({ view, onClose, onUpdate }: ActionItems
               {actionItems.length} {view === 'outstanding' ? 'outstanding' : 'completed'} item{actionItems.length !== 1 ? 's' : ''} across {Object.keys(groupedItems).length} meeting{Object.keys(groupedItems).length !== 1 ? 's' : ''}
             </p>
             <button
-              onClick={onClose}
+              onClick={saveChangesAndClose}
               className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
             >
               Close

@@ -33,6 +33,7 @@ function DashboardContent() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
   const [showActionItems, setShowActionItems] = useState<'outstanding' | 'completed' | null>(null)
+  const [updatingItem, setUpdatingItem] = useState<string | null>(null) // Track which item is being updated
   const { user } = useAuth()
   const searchParams = useSearchParams()
 
@@ -93,8 +94,20 @@ function DashboardContent() {
     if (!selectedMeeting) return
 
     try {
+      // Prevent double-clicking or rapid clicks
+      if (updatingItem === actionItemId) return
+      setUpdatingItem(actionItemId)
+
       // Get fresh data to avoid stale state issues
       const currentItems = selectedMeeting.action_items || []
+
+      // Validate that we found exactly one item to update
+      const targetItem = currentItems.find(item => item.id === actionItemId)
+      if (!targetItem) {
+        console.error('Target action item not found:', actionItemId)
+        setUpdatingItem(null)
+        return
+      }
 
       // Find and update only the specific item
       const updatedActionItems = currentItems.map(item => {
@@ -103,6 +116,17 @@ function DashboardContent() {
         }
         return item
       })
+
+      // Verify only one item changed
+      const changedCount = updatedActionItems.filter((item, index) =>
+        item.completed !== currentItems[index].completed
+      ).length
+
+      if (changedCount !== 1) {
+        console.error('Unexpected number of items changed:', changedCount)
+        setUpdatingItem(null)
+        return
+      }
 
       // Update local state
       const updatedMeeting = {
@@ -158,6 +182,9 @@ function DashboardContent() {
           )
         )
       }
+    } finally {
+      // Always reset the updating flag
+      setUpdatingItem(null)
     }
   }
 
@@ -471,8 +498,7 @@ function DashboardContent() {
               view={showActionItems}
               onClose={() => {
                 setShowActionItems(null)
-                // Refresh meetings data when modal closes to ensure sync
-                fetchMeetings()
+                // No need to call fetchMeetings here since saveChangesAndClose handles it
               }}
               onUpdate={fetchMeetings}
             />
@@ -616,12 +642,15 @@ function DashboardContent() {
                       <div className="flex-1 flex items-start space-x-3">
                         <button
                           onClick={() => updateActionItem(item.id, !item.completed)}
+                          disabled={updatingItem === item.id}
                           className={`flex-shrink-0 w-5 h-5 rounded border-2 mt-1 transition-all duration-200 ${
-                            item.completed
+                            updatingItem === item.id
+                              ? 'opacity-50 cursor-not-allowed border-gray-300'
+                              : item.completed
                               ? 'bg-green-500 border-green-500 hover:bg-green-600 hover:border-green-600'
                               : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
                           }`}
-                          title={item.completed ? 'Mark as incomplete' : 'Mark as complete'}
+                          title={updatingItem === item.id ? 'Updating...' : item.completed ? 'Mark as incomplete' : 'Mark as complete'}
                         >
                           {item.completed && (
                             <svg className="w-3 h-3 text-white m-auto" fill="currentColor" viewBox="0 0 20 20">
