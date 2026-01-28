@@ -117,7 +117,6 @@ export default function HomePage() {
           {/* Security Section */}
           <div className="mt-20 bg-gray-50 rounded-xl p-12 max-w-6xl mx-auto">
             <div className="text-center mb-8">
-              <div className="text-5xl mb-4">🔒</div>
               <h2 className="text-3xl font-bold text-gray-900 mb-4">
                 Your Security is Our Priority
               </h2>

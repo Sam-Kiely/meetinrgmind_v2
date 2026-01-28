@@ -143,7 +143,7 @@ export default function ParticipantBank() {
   if (loading) {
     return (
       <div className="bg-white rounded-xl shadow-lg p-8">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">👥 Participant Bank</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">Participant Bank</h2>
         <div className="text-center py-8">
           <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
         </div>
@@ -154,7 +154,7 @@ export default function ParticipantBank() {
   return (
     <div className="bg-white rounded-xl shadow-lg p-8">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">👥 Participant Bank</h2>
+        <h2 className="text-2xl font-bold text-gray-900">Participant Bank</h2>
         <div className="text-sm text-gray-600">
           {contacts.length} contact{contacts.length !== 1 ? 's' : ''} saved
         </div>

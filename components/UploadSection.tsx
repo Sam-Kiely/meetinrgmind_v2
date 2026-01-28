@@ -301,7 +301,7 @@ export default function UploadSection({ onAnalysisComplete }: UploadSectionProps
         {/* Usage Status Display */}
         {!user ? (
           <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <p className="text-blue-800 font-medium">🔒 Sign in required</p>
+            <p className="text-blue-800 font-medium">Sign in required</p>
             <p className="text-blue-600 text-sm mt-1">
               Please <a href="/auth/signin" className="underline hover:text-blue-800">sign in</a> to extract action items from meetings
             </p>
@@ -320,10 +320,10 @@ export default function UploadSection({ onAnalysisComplete }: UploadSectionProps
               usageStatus.canExtract ? 'text-green-800' : 'text-red-800'
             }`}>
               {usageStatus.hasSubscription
-                ? '✨ Unlimited extracts'
+                ? 'Unlimited extracts'
                 : usageStatus.canExtract
-                  ? `🎯 ${3 - usageStatus.extractCount} free extracts remaining`
-                  : '🔒 Free limit reached'
+                  ? `${3 - usageStatus.extractCount} free extracts remaining`
+                  : 'Free limit reached'
               }
             </p>
             <p className={`text-sm mt-1 ${
@@ -349,7 +349,7 @@ export default function UploadSection({ onAnalysisComplete }: UploadSectionProps
                 : 'text-gray-600 hover:text-gray-800'
             }`}
           >
-            📝 Paste Transcript
+            Paste Transcript
           </button>
           <button
             onClick={() => setMode('audio')}
@@ -359,7 +359,7 @@ export default function UploadSection({ onAnalysisComplete }: UploadSectionProps
                 : 'text-gray-600 hover:text-gray-800'
             }`}
           >
-            🎵 Upload Audio
+            Upload Audio
           </button>
         </div>
       </div>
@@ -397,7 +397,6 @@ export default function UploadSection({ onAnalysisComplete }: UploadSectionProps
                 }`}
               >
                 <div className="space-y-4">
-                  <div className="text-4xl">🎵</div>
                   <div>
                     <p className="text-lg text-gray-600 mb-2">
                       Drag and drop your audio file here
@@ -428,7 +427,6 @@ export default function UploadSection({ onAnalysisComplete }: UploadSectionProps
               <div className="border border-gray-300 rounded-lg p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
-                    <div className="text-2xl">🎵</div>
                     <div>
                       <p className="font-medium text-gray-900">{selectedFile.name}</p>
                       <p className="text-sm text-gray-500">

@@ -12,7 +12,7 @@ export default function HowItWorksPage() {
         'Works with all meeting platforms',
         'Process meetings retroactively'
       ],
-      image: '📝'
+      image: ''
     },
     {
       number: '2',
@@ -27,7 +27,7 @@ export default function HowItWorksPage() {
         'Important dates and milestones',
         'Audio/transcripts deleted after processing'
       ],
-      image: '🤖'
+      image: ''
     },
     {
       number: '3',
@@ -42,28 +42,28 @@ export default function HowItWorksPage() {
         'Export to various formats',
         'One-click email copying'
       ],
-      image: '📧'
+      image: ''
     }
   ]
 
   const benefits = [
     {
-      icon: '⚡',
+      icon: '',
       title: 'Save 30+ Minutes Per Meeting',
       description: 'Eliminate manual note-taking and follow-up drafting. Get comprehensive results in under 60 seconds.'
     },
     {
-      icon: '🎯',
+      icon: '',
       title: 'Never Miss Action Items',
       description: 'AI-powered analysis ensures every task, decision, and deadline is captured and properly assigned.'
     },
     {
-      icon: '📈',
+      icon: '',
       title: 'Improve Team Accountability',
       description: 'Clear action items with owners and deadlines keep everyone aligned and productive.'
     },
     {
-      icon: '🔒',
+      icon: '',
       title: 'Zero Data Retention',
       description: 'Audio files and raw transcripts are deleted immediately after processing. We only store extracted insights, never your original content.'
     }
@@ -128,7 +128,6 @@ export default function HowItWorksPage() {
 
               <div className="flex-1">
                 <div className="bg-white rounded-xl shadow-lg p-8 text-center">
-                  <div className="text-8xl mb-4">{step.image}</div>
                   <div className="bg-gray-50 rounded-lg p-6">
                     <h3 className="font-semibold text-gray-900 mb-2">Step {step.number}</h3>
                     <p className="text-sm text-gray-600">
@@ -178,7 +177,6 @@ export default function HowItWorksPage() {
         {/* Security Section */}
         <div className="mt-20 bg-gray-50 rounded-xl p-12">
           <div className="text-center mb-8">
-            <div className="text-5xl mb-4">🔒</div>
             <h2 className="text-3xl font-bold text-gray-900 mb-4">
               Your Security is Our Priority
             </h2>
@@ -228,7 +226,6 @@ export default function HowItWorksPage() {
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             {benefits.map((benefit, index) => (
               <div key={index} className="bg-white rounded-xl shadow-lg p-6 text-center">
-                <div className="text-4xl mb-4">{benefit.icon}</div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">{benefit.title}</h3>
                 <p className="text-gray-600 text-sm">{benefit.description}</p>
               </div>

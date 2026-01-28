@@ -16,7 +16,7 @@ export function EmailSection({ emails, onEmailsUpdate }: EmailSectionProps) {
   if (!emails || emails.length === 0) {
     return (
       <div className="space-y-6">
-        <h3 className="text-2xl font-bold text-gray-900">📧 Follow-up Emails</h3>
+        <h3 className="text-2xl font-bold text-gray-900">Follow-up Emails</h3>
         <div className="text-center py-8 text-gray-500">
           <p>No follow-up emails needed for this meeting</p>
           <p className="text-sm mt-2">The AI determined that this meeting doesn't require email follow-ups</p>
@@ -39,7 +39,7 @@ export function EmailSection({ emails, onEmailsUpdate }: EmailSectionProps) {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h3 className="text-2xl font-bold text-gray-900">📧 Follow-up Emails</h3>
+        <h3 className="text-2xl font-bold text-gray-900">Follow-up Emails</h3>
         {localEmails.length === 1 && (
           <span className="text-sm text-gray-500">
             Only {localEmails[0].type === 'client_external' ? 'client' : 'internal'} email needed

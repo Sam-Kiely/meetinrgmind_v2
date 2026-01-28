@@ -222,12 +222,12 @@ export default function ResultsDisplay({ analysis }: ResultsDisplayProps) {
       </div>
 
       <div className="bg-white rounded-xl shadow-lg p-8">
-        <h3 className="text-2xl font-bold text-gray-900 mb-4">📋 Meeting Summary</h3>
+        <h3 className="text-2xl font-bold text-gray-900 mb-4">Meeting Summary</h3>
         <p className="text-gray-700 leading-relaxed">{analysis.summary}</p>
       </div>
 
       <div className="bg-white rounded-xl shadow-lg p-8">
-        <h3 className="text-2xl font-bold text-gray-900 mb-6">👥 Meeting Participants</h3>
+        <h3 className="text-2xl font-bold text-gray-900 mb-6">Meeting Participants</h3>
 
         {showRefreshPrompt && (
           <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
@@ -276,7 +276,7 @@ export default function ResultsDisplay({ analysis }: ResultsDisplayProps) {
       </div>
 
       <div className="bg-white rounded-xl shadow-lg p-8">
-        <h3 className="text-2xl font-bold text-gray-900 mb-6">✅ Action Items</h3>
+        <h3 className="text-2xl font-bold text-gray-900 mb-6">Action Items</h3>
         <div className="space-y-4">
           {analysis.actionItems.map((item, index) => (
             <ActionItemCard key={index} actionItem={item} />
@@ -286,7 +286,7 @@ export default function ResultsDisplay({ analysis }: ResultsDisplayProps) {
 
       {analysis.decisions.length > 0 && (
         <div className="bg-white rounded-xl shadow-lg p-8">
-          <h3 className="text-2xl font-bold text-gray-900 mb-6">🎯 Decisions Made</h3>
+          <h3 className="text-2xl font-bold text-gray-900 mb-6">Decisions Made</h3>
           <ul className="space-y-3">
             {analysis.decisions.map((decision, index) => (
               <li key={index} className="flex items-start">
@@ -300,7 +300,7 @@ export default function ResultsDisplay({ analysis }: ResultsDisplayProps) {
 
       {analysis.keyDates.length > 0 && (
         <div className="bg-white rounded-xl shadow-lg p-8">
-          <h3 className="text-2xl font-bold text-gray-900 mb-6">📅 Key Dates</h3>
+          <h3 className="text-2xl font-bold text-gray-900 mb-6">Key Dates</h3>
           <div className="space-y-3">
             {analysis.keyDates.map((keyDate, index) => (
               <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">

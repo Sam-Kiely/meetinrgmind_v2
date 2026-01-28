@@ -34,7 +34,7 @@ export function RecordingDisclaimer({ isOpen, onClose, onAccept }: RecordingDisc
         <div className="p-8">
           {/* Header */}
           <div className="mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">📞 Phone Call Recording Laws</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Phone Call Recording Laws</h2>
             <p className="text-gray-600">
               Before uploading recorded phone calls, please understand the recording consent laws that may apply to you.
             </p>
@@ -42,7 +42,7 @@ export function RecordingDisclaimer({ isOpen, onClose, onAccept }: RecordingDisc
 
           {/* One-Party Consent States */}
           <div className="mb-6">
-            <h3 className="font-semibold text-gray-900 mb-2">✅ One-Party Consent (38 States + DC)</h3>
+            <h3 className="font-semibold text-gray-900 mb-2">One-Party Consent (38 States + DC)</h3>
             <p className="text-sm text-gray-600 mb-3">
               In these states, only ONE person on the call needs to know it's being recorded (that's you).
               You can legally record without telling the other party.
@@ -56,7 +56,7 @@ export function RecordingDisclaimer({ isOpen, onClose, onAccept }: RecordingDisc
 
           {/* All-Party Consent States */}
           <div className="mb-6">
-            <h3 className="font-semibold text-gray-900 mb-2">⚠️ All-Party Consent (12 States)</h3>
+            <h3 className="font-semibold text-gray-900 mb-2">All-Party Consent (12 States)</h3>
             <p className="text-sm text-gray-600 mb-3">
               In these states, ALL parties on the call must consent to being recorded.
               Recording without consent may be illegal.
@@ -70,7 +70,7 @@ export function RecordingDisclaimer({ isOpen, onClose, onAccept }: RecordingDisc
 
           {/* Important Notes */}
           <div className="mb-6">
-            <h3 className="font-semibold text-gray-900 mb-2">📝 Important Notes</h3>
+            <h3 className="font-semibold text-gray-900 mb-2">Important Notes</h3>
             <ul className="text-sm text-gray-600 space-y-1">
               <li>• If you're in a one-party state but the OTHER person is in an all-party state, the stricter law typically applies</li>
               <li>• Business calls may have different rules than personal calls</li>
